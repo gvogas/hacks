@@ -1,5 +1,6 @@
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException
-from services import session_store, auth
+from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+
+from services import auth, session_store
 from services.file_parser import extract_text
 
 router = APIRouter()
@@ -18,17 +19,15 @@ async def upload_file(
         raise HTTPException(status_code=400, detail=f"Unsupported file type: {ext}")
 
     session_id = session_store.ensure_session(session_id, user["id"])
-    data = await file.read()
     try:
-        text = extract_text(data, file.filename)
+        text = extract_text(await file.read(), file.filename)
     except Exception as exc:
         raise HTTPException(status_code=400, detail=f"Could not read {file.filename}.") from exc
 
     session = session_store.require_session(session_id, user["id"])
-    existing = session.get("uploaded_texts", [])
-    existing.append(text)
-    session_store.update_session(session_id, user["id"], {"uploaded_texts": existing})
-
+    session_store.update_session(
+        session_id, user["id"], {"uploaded_texts": session["uploaded_texts"] + [text]}
+    )
     return {
         "session_id": session_id,
         "filename": file.filename,

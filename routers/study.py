@@ -1,9 +1,10 @@
 from fastapi import APIRouter, HTTPException
-from models.schemas import StudyStartRequest, GenerateLearningRequest
-from agents.research_agent import ResearchAgent
+
 from agents.content_agent import ContentAgent
 from agents.learning_agent import LearningAgent
-from services import session_store, auth
+from agents.research_agent import ResearchAgent
+from models.schemas import GenerateLearningRequest, StudyStartRequest
+from services import auth, session_store
 from services.exceptions import ExternalServiceError
 
 router = APIRouter()
@@ -16,20 +17,16 @@ learning_agent = LearningAgent()
 async def study_start(req: StudyStartRequest, user: dict = auth.CurrentUser):
     session_id = session_store.ensure_session(req.session_id, user["id"])
 
-    warnings = []
+    warnings: list[str] = []
     try:
         search_results = await research_agent.run(req.topic)
     except ExternalServiceError as exc:
+        # Web search is best-effort; fall back to uploaded notes alone.
         search_results = []
         warnings.append(str(exc))
 
     session = session_store.require_session(session_id, user["id"])
-    uploaded_texts = session.get("uploaded_texts", [])
-
-    try:
-        notes = await content_agent.run(req.topic, search_results, uploaded_texts)
-    except ExternalServiceError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+    notes = await content_agent.run(req.topic, search_results, session["uploaded_texts"])
 
     session_store.update_session(session_id, user["id"], {"topic": req.topic, "notes": notes})
     return {"session_id": session_id, "notes": notes, "warnings": warnings}
@@ -38,18 +35,14 @@ async def study_start(req: StudyStartRequest, user: dict = auth.CurrentUser):
 @router.post("/generate-learning")
 async def generate_learning(req: GenerateLearningRequest, user: dict = auth.CurrentUser):
     session = session_store.require_session(req.session_id, user["id"])
-    if not session.get("notes"):
+    if not session["notes"]:
         raise HTTPException(status_code=400, detail="No notes found. Run /study/start first.")
 
-    try:
-        result = await learning_agent.run(
-            session["notes"],
-            num_flashcards=req.num_flashcards,
-            num_questions=req.num_questions,
-        )
-    except ExternalServiceError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
-
+    result = await learning_agent.run(
+        session["notes"],
+        num_flashcards=req.num_flashcards,
+        num_questions=req.num_questions,
+    )
     session_store.update_session(req.session_id, user["id"], {
         "flashcards": result.get("flashcards", []),
         "quiz_questions": result.get("quiz_questions", []),
@@ -70,7 +63,6 @@ async def get_session(session_id: str, user: dict = auth.CurrentUser):
 
 @router.delete("/session/{session_id}")
 async def delete_session(session_id: str, user: dict = auth.CurrentUser):
-    deleted = session_store.delete_session(session_id, user["id"])
-    if not deleted:
+    if not session_store.delete_session(session_id, user["id"]):
         raise HTTPException(status_code=404, detail="Session not found")
     return {"deleted": session_id}

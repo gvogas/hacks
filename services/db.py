@@ -48,8 +48,10 @@ def execute(sql: str, params: tuple = ()) -> sqlite3.Cursor:
 
 
 def query_one(sql: str, params: tuple = ()) -> sqlite3.Row | None:
-    return execute(sql, params).fetchone()
+    with _lock:
+        return get_conn().execute(sql, params).fetchone()
 
 
 def query_all(sql: str, params: tuple = ()) -> list[sqlite3.Row]:
-    return execute(sql, params).fetchall()
+    with _lock:
+        return get_conn().execute(sql, params).fetchall()

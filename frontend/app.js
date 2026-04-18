@@ -65,7 +65,6 @@ async function submitAuth() {
     const path = authMode === 'login' ? '/api/auth/login' : '/api/auth/signup';
     const res = await apiJson(path, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
     });
     authToken = res.token;
@@ -86,11 +85,8 @@ async function submitAuth() {
 
 function logout() {
   if (!confirm('Log out? Your sessions stay saved on the server.')) return;
-  authToken = null;
-  currentUser = null;
-  sessionId = null;
   localStorage.removeItem('auth_token');
-  localStorage.removeItem('study_session_id');
+  setSession(null);
   location.reload();
 }
 
@@ -175,7 +171,6 @@ async function loadSession(id) {
     switchTab(s.notes ? 'notes' : 'research');
     toggleHistory();
     toast('Session loaded.', 'success');
-    loadSessionList();
   } catch (err) {
     toast('Could not load session: ' + err.message, 'error');
   }
@@ -186,11 +181,7 @@ async function deleteSessionConfirm(e, id) {
   if (!confirm('Delete this session? This cannot be undone.')) return;
   try {
     await apiJson('/api/study/session/' + encodeURIComponent(id), { method: 'DELETE' });
-    if (id === sessionId) {
-      localStorage.removeItem('study_session_id');
-      sessionId = null;
-      document.getElementById('session-badge').textContent = '';
-    }
+    if (id === sessionId) setSession(null);
     loadSessionList();
     toast('Session deleted.', 'success');
   } catch (err) {
@@ -202,24 +193,19 @@ async function deleteSessionConfirm(e, id) {
 
 function setSession(id) {
   sessionId = id;
-  localStorage.setItem('study_session_id', id);
   const badge = document.getElementById('session-badge');
-  badge.textContent = 'session: ' + id.slice(0, 8);
+  if (id) {
+    localStorage.setItem('study_session_id', id);
+    badge.textContent = 'session: ' + id.slice(0, 8);
+  } else {
+    localStorage.removeItem('study_session_id');
+    badge.textContent = '';
+  }
 }
 
 function resetSession() {
   if (!confirm('Start a new session? Your current notes, flashcards, quiz and plan will be cleared from this page.')) return;
-  localStorage.removeItem('study_session_id');
-  sessionId = null;
-  flashcards = [];
-  quizQuestions = [];
-  cardIndex = 0;
-  state.notes = false;
-  state.learning = false;
-  pendingFiles.length = 0;
-  document.getElementById('session-badge').textContent = '';
-  document.getElementById('topic-input').value = '';
-  renderFileList();
+  setSession(null);
   location.reload();
 }
 
@@ -359,7 +345,6 @@ async function startResearch() {
 
     const res = await apiJson('/api/study/start', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ topic, session_id: sessionId }),
     });
 
@@ -441,7 +426,6 @@ async function generateLearning() {
   try {
     const res = await apiJson('/api/study/generate-learning', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ session_id: sessionId, num_flashcards: 10, num_questions: 5 }),
     });
 
@@ -561,7 +545,6 @@ async function submitQuiz() {
   try {
     const res = await apiJson('/api/quiz/submit', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ session_id: sessionId, answers }),
     });
 
@@ -609,7 +592,6 @@ async function generatePlan() {
   try {
     const res = await apiJson('/api/plan/generate', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ session_id: sessionId, available_days: days, hours_per_day: hours }),
     });
 
@@ -659,6 +641,9 @@ function setStatus(el, msg, isError = false) {
 async function apiJson(path, options = {}) {
   const opts = { ...options, headers: { ...(options.headers || {}) } };
   if (authToken) opts.headers['Authorization'] = 'Bearer ' + authToken;
+  if (typeof opts.body === 'string' && !opts.headers['Content-Type']) {
+    opts.headers['Content-Type'] = 'application/json';
+  }
 
   const response = await fetch(API + path, opts);
   const text = await response.text();

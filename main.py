@@ -1,5 +1,6 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 
@@ -7,10 +8,17 @@ load_dotenv()
 
 from routers import study, upload, quiz, plan, auth as auth_router
 from services import db as _db
+from services.exceptions import ExternalServiceError
 
+# Eagerly open the DB so schema migrations run at startup, not on first request.
 _db.get_conn()
 
 app = FastAPI(title="AI Student Agent")
+
+
+@app.exception_handler(ExternalServiceError)
+async def _external_service_error(_: Request, exc: ExternalServiceError):
+    return JSONResponse(status_code=exc.status_code, content={"detail": str(exc)})
 
 app.add_middleware(
     CORSMiddleware,
