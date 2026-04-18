@@ -67,6 +67,19 @@ def _init_schema(conn: sqlite3.Connection):
             updated_at TEXT NOT NULL,
             PRIMARY KEY (user_id, upgrade_id)
         );
+
+        CREATE TABLE IF NOT EXISTS spotify_connections (
+            user_id         INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+            spotify_user_id TEXT,
+            display_name    TEXT,
+            scope           TEXT NOT NULL DEFAULT '',
+            token_type      TEXT NOT NULL DEFAULT 'Bearer',
+            access_token    TEXT NOT NULL,
+            refresh_token   TEXT,
+            expires_at      TEXT NOT NULL,
+            created_at      TEXT NOT NULL,
+            updated_at      TEXT NOT NULL
+        );
         """
     )
     for col, defn in [

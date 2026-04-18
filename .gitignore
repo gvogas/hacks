@@ -11,6 +11,7 @@ pytest_tmp_run_*/
 venv/
 sessions.json
 .jwt_secret
+.spotify_token_key
 app.db
 app.db-journal
 app.db-wal

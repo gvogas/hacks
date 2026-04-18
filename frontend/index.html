@@ -105,6 +105,9 @@
     <button class="tab-btn shop-tab" data-tab="shop">
       <span class="tab-num">$</span> Shop
     </button>
+    <button class="tab-btn spotify-tab" data-tab="spotify">
+      <span class="tab-num">S</span> Spotify
+    </button>
   </nav>
 
   <!-- SECTION 1: Research -->
@@ -411,10 +414,54 @@
     </div>
   </div>
 
+  <!-- SECTION 8: Spotify -->
+  <section id="tab-spotify" class="tab-section">
+    <h2>Spotify</h2>
+    <p class="section-hint">Choose a Spotify device, then play a playlist or track while you study.</p>
+
+    <div class="spotify-panel">
+      <div class="spotify-panel-head">
+        <div>
+          <span class="spotify-kicker">Now Playing</span>
+          <strong id="spotify-now-title">Nothing playing</strong>
+        </div>
+        <button class="btn-secondary" type="button" onclick="loadSpotifyCurrent()">Refresh</button>
+      </div>
+      <div id="spotify-now-playing" class="spotify-now-playing">
+        <div class="spotify-empty">Connect Spotify and start playback to see the current song.</div>
+      </div>
+    </div>
+
+    <div class="spotify-panel">
+      <div class="spotify-panel-head">
+        <div>
+          <span class="spotify-kicker">Device</span>
+          <strong id="spotify-device-summary">No device selected</strong>
+        </div>
+        <button class="btn-secondary" type="button" onclick="loadSpotifyDevices()">Refresh Devices</button>
+      </div>
+      <div id="spotify-device-list" class="spotify-device-list"></div>
+    </div>
+
+    <div class="spotify-panel">
+      <div class="field">
+        <label for="spotify-search-input">Search Spotify</label>
+        <input id="spotify-search-input" type="text" autocomplete="off" placeholder="Playlist or song name" />
+      </div>
+      <div class="actions">
+        <button class="btn-primary" id="spotify-search-btn" type="button" onclick="searchSpotify()">Search</button>
+        <button class="btn-secondary" type="button" onclick="loadSpotifyPlaylists()">My Playlists</button>
+        <div id="spotify-status" class="status-msg"></div>
+      </div>
+      <div id="spotify-results" class="spotify-results"></div>
+    </div>
+  </section>
+
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
   </div> <!-- /app-shell -->
 
+  <script src="https://sdk.scdn.co/spotify-player.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

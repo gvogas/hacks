@@ -57,6 +57,15 @@ def make_token(user_id: int, email: str) -> str:
     return jwt.encode(payload, _SECRET, algorithm=JWT_ALG)
 
 
+def make_ephemeral_token(payload: dict, ttl_minutes: int = 10) -> str:
+    payload = {**payload, "exp": now_utc() + timedelta(minutes=ttl_minutes)}
+    return jwt.encode(payload, _SECRET, algorithm=JWT_ALG)
+
+
+def decode_ephemeral_token(token: str) -> dict:
+    return jwt.decode(token, _SECRET, algorithms=[JWT_ALG])
+
+
 def issue_session(user: dict) -> dict:
     return {"token": make_token(user["id"], user["email"]), "user": user}
 
