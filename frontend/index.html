@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Study Assistant</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <h1>AI Study Assistant</h1>
+    <span id="session-badge"></span>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab-btn active" data-tab="research">1. Research</button>
+    <button class="tab-btn" data-tab="notes">2. Notes</button>
+    <button class="tab-btn" data-tab="flashcards">3. Flashcards</button>
+    <button class="tab-btn" data-tab="quiz">4. Quiz</button>
+    <button class="tab-btn" data-tab="plan">5. Study Plan</button>
+  </nav>
+
+  <!-- SECTION 1: Research -->
+  <section id="tab-research" class="tab-section active">
+    <h2>Start Your Research</h2>
+    <div class="card">
+      <label for="topic-input">Topic</label>
+      <input id="topic-input" type="text" placeholder="e.g. Photosynthesis, World War II, Linear Algebra" />
+
+      <label>Upload Files (optional)</label>
+      <div class="upload-area" id="upload-area">
+        <input type="file" id="file-input" accept=".pdf,.pptx,.txt,.md" multiple hidden />
+        <button class="btn-secondary" onclick="document.getElementById('file-input').click()">Choose Files</button>
+        <div id="file-list"></div>
+      </div>
+
+      <button class="btn-primary" id="start-btn" onclick="startResearch()">Start Research</button>
+      <div id="research-status" class="status-msg"></div>
+    </div>
+  </section>
+
+  <!-- SECTION 2: Notes -->
+  <section id="tab-notes" class="tab-section">
+    <h2>Study Notes</h2>
+    <div id="notes-content">
+      <p class="placeholder">Run Research first to generate notes.</p>
+    </div>
+    <button class="btn-primary" id="generate-learning-btn" style="display:none" onclick="generateLearning()">
+      Generate Flashcards &amp; Quiz
+    </button>
+    <div id="learning-status" class="status-msg"></div>
+  </section>
+
+  <!-- SECTION 3: Flashcards -->
+  <section id="tab-flashcards" class="tab-section">
+    <h2>Flashcards</h2>
+    <div id="flashcard-container">
+      <p class="placeholder">Generate flashcards from your notes first.</p>
+    </div>
+    <div id="flashcard-nav" style="display:none">
+      <button class="btn-secondary" onclick="prevCard()">&#8592; Prev</button>
+      <span id="card-counter"></span>
+      <button class="btn-secondary" onclick="nextCard()">Next &#8594;</button>
+    </div>
+  </section>
+
+  <!-- SECTION 4: Quiz -->
+  <section id="tab-quiz" class="tab-section">
+    <h2>Quiz</h2>
+    <div id="quiz-container">
+      <p class="placeholder">Generate a quiz from your notes first.</p>
+    </div>
+    <button class="btn-primary" id="submit-quiz-btn" style="display:none" onclick="submitQuiz()">Submit Quiz</button>
+    <div id="quiz-results"></div>
+  </section>
+
+  <!-- SECTION 5: Study Plan -->
+  <section id="tab-plan" class="tab-section">
+    <h2>Personalized Study Plan</h2>
+    <div class="card" id="plan-inputs">
+      <label for="days-input">Available Days</label>
+      <input id="days-input" type="number" value="7" min="1" max="30" />
+      <label for="hours-input">Hours Per Day</label>
+      <input id="hours-input" type="number" value="2" min="0.5" max="12" step="0.5" />
+      <button class="btn-primary" onclick="generatePlan()">Generate Study Plan</button>
+      <div id="plan-status" class="status-msg"></div>
+    </div>
+    <div id="plan-content"></div>
+  </section>
+
+  <script src="app.js"></script>
+</body>
+</html>
