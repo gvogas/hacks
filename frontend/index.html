@@ -44,6 +44,13 @@
     </div>
     <div class="header-right">
       <span id="coin-badge" class="coin-badge" title="Coins earned while studying">$ 0</span>
+      <button class="header-btn header-util-btn" type="button" onclick="switchTab('shop')" title="Upgrade shop">
+        <span class="header-util-icon">$</span> Shop
+      </button>
+      <button class="header-btn header-util-btn" type="button" onclick="switchTab('spotify')" title="Spotify">
+        <span class="header-util-icon spotify">♪</span> Spotify
+      </button>
+      <span class="header-divider" aria-hidden="true"></span>
       <button id="profile-btn" class="header-profile-btn" type="button" onclick="switchTab('profile')" title="Open profile">
         <span class="header-profile-star">★</span>
         <span>Profile</span>
@@ -101,12 +108,6 @@
     <button class="tab-btn" data-tab="plan" data-step="5" data-requires="notes">
       <span class="tab-num">5</span> Study Plan
       <span class="tab-lock" aria-hidden="true">&#128274;</span>
-    </button>
-    <button class="tab-btn shop-tab" data-tab="shop">
-      <span class="tab-num">$</span> Shop
-    </button>
-    <button class="tab-btn spotify-tab" data-tab="spotify">
-      <span class="tab-num">S</span> Spotify
     </button>
   </nav>
 

@@ -1,19 +1,87 @@
 # AI Study Assistant
 
-FastAPI + vanilla JavaScript app for generating study notes, flashcards,
-quizzes, and study plans from a topic plus optional uploaded notes, PDFs, or
-slides.
+A gamified study companion that turns any topic (plus optional notes, PDFs, or
+slides) into AI-generated study notes, flashcards, quizzes, and a personalized
+study plan — with a shop, a growable plant pet, tiered skins, and optional
+Spotify playback while you study.
 
 The backend serves both the API and the static frontend. There is no separate
 Node or frontend build step.
 
+## Features
+
+**Study pipeline**
+- AI research agent builds notes with summary, key concepts, and sectioned
+  content from a topic plus uploaded files (`.pdf`, `.pptx`, `.txt`, `.md`).
+- Generates 1–30 flashcards and 1–20 multiple-choice quiz questions per
+  session, at your chosen difficulty.
+- Personalized multi-day study plan with priority tagging on weak areas.
+- Session history sidebar — reload, rename, or delete any past session.
+
+**Gamification**
+- Earn coins while studying (per-minute ticks) plus quiz, flashcard, and plan
+  bonuses.
+- Shop with four upgrade tracks: Focus Engine (coin rate), Card Foundry,
+  Quiz Magnet, and Plan Compass.
+- Plant pet that grows in XP as you study and takes damage from wrong answers.
+  If it dies you lose coins and have to revive it by studying.
+- **Plant health heals when you review a flashcard or answer a quiz question
+  correctly** (+2 per unique card, +5 per correct answer).
+- **Seven tier skins with distinct plant sprites**: Bad, Average, Good,
+  Excellent, Amazing, Phenomenal, Legendary — each tier unlocks a different
+  plant look and grants a one-time coin reward when claimed.
+
+**Integrations**
+- Optional Spotify Connect: search tracks/playlists, transfer playback between
+  devices, control play/pause/next from the header. In-browser playback via
+  the Spotify Web Playback SDK (Premium required).
+
+**Accounts**
+- Email + password auth, JWT sessions, local SQLite storage. Each teammate
+  has their own isolated data in `app.db`.
+
+## Tech Stack
+
+**Backend**
+- Python 3.11+
+- [FastAPI](https://fastapi.tiangolo.com/) — API framework
+- [Uvicorn](https://www.uvicorn.org/) — ASGI server with auto-reload
+- [Pydantic v2](https://docs.pydantic.dev/) — request/response schemas
+- SQLite (stdlib `sqlite3`) — local persistence in `app.db`
+- [bcrypt](https://pypi.org/project/bcrypt/) — password hashing
+- [PyJWT](https://pyjwt.readthedocs.io/) — session tokens
+- [cryptography](https://cryptography.io/) (Fernet) — Spotify token encryption
+- [python-dotenv](https://pypi.org/project/python-dotenv/) — `.env` loading
+- [PyPDF2](https://pypdf2.readthedocs.io/) and
+  [python-pptx](https://python-pptx.readthedocs.io/) — file parsing
+- [aiofiles](https://pypi.org/project/aiofiles/) — async uploads
+- [python-multipart](https://pypi.org/project/python-multipart/) — form uploads
+- [email-validator](https://pypi.org/project/email-validator/) — email parsing
+
+**AI / external services**
+- [Groq](https://groq.com/) Python SDK — LLM generation (default model
+  `llama-3.3-70b-versatile`)
+- [Tavily](https://tavily.com/) — web research
+- [Spotify Web API](https://developer.spotify.com/documentation/web-api) and
+  Web Playback SDK — music playback
+
+**Frontend**
+- Vanilla HTML, CSS, and JavaScript — no framework, no build step
+- Spotify Web Playback SDK loaded via CDN
+
+**Testing**
+- [pytest](https://docs.pytest.org/) + [httpx](https://www.python-httpx.org/)
+  `AsyncClient` — async endpoint tests against a temp SQLite DB with stubbed
+  AI/search agents.
+
 ## Requirements
 
 - Python 3.11 or newer
-- Groq API key for AI generation
-- Tavily API key for web research
+- [Groq API key](https://console.groq.com/) for AI generation
+- [Tavily API key](https://tavily.com/) for web research
+- (Optional) Spotify developer app for music integration
 
-## Start The App
+## Quick Start
 
 ### Windows PowerShell
 
@@ -24,26 +92,7 @@ python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ```
 
-Create a `.env` file in the project root:
-
-```env
-GROQ_API_KEY=your-groq-key-here
-TAVILY_API_KEY=your-tavily-key-here
-```
-
-Start the server:
-
-```powershell
-python main.py
-```
-
-Open:
-
-```text
-http://127.0.0.1:8000
-```
-
-### macOS Or Linux
+### macOS / Linux
 
 ```bash
 python3 -m venv .venv
@@ -59,41 +108,77 @@ GROQ_API_KEY=your-groq-key-here
 TAVILY_API_KEY=your-tavily-key-here
 ```
 
-Start the server:
+## Run The App
 
 ```bash
 python main.py
 ```
 
-Open:
+Then open:
 
 ```text
 http://127.0.0.1:8000
 ```
 
-## First Login
+### Auto-Reload In Development
 
-When the app opens, create an account with any email and a password of at least
-6 characters. Accounts and study sessions are stored locally in `app.db`, so
-each teammate has their own local data.
+`RELOAD=true` is on by default, so Uvicorn watches Python files and restarts
+automatically on save. Static frontend files (`frontend/*.html`, `*.css`,
+`*.js`) are served fresh on every request — just hard-refresh the browser:
 
-## Health Check
+- Windows/Linux: `Ctrl + Shift + R`
+- macOS: `Cmd + Shift + R`
 
-To confirm the backend is running:
+To disable auto-reload (e.g. for profiling or production-style runs):
+
+```bash
+RELOAD=false python main.py
+```
+
+### First Login
+
+Create an account with any email and a password of at least 6 characters.
+Accounts and sessions are stored locally in `app.db`.
+
+### Health Check
 
 ```text
 http://127.0.0.1:8000/api/health
 ```
 
-Expected response:
+Expected:
 
 ```json
 {"status":"ok","database":"ok"}
 ```
 
+## Run Tests
+
+Install the dev dependencies (includes pytest + httpx):
+
+```bash
+python -m pip install -r requirements-dev.txt
+```
+
+Run the full suite:
+
+```bash
+python -m pytest
+```
+
+Run a single file or test:
+
+```bash
+python -m pytest tests/test_quiz.py
+python -m pytest tests/test_quiz.py::test_submit_quiz_heals_plant
+```
+
+The tests spin up a temporary SQLite database and stub the AI and search
+agents, so they do not consume real Groq or Tavily credits.
+
 ## Environment Variables
 
-Required for the full app:
+Required:
 
 ```env
 GROQ_API_KEY=your-groq-key-here
@@ -109,12 +194,14 @@ HOST=127.0.0.1
 PORT=8000
 RELOAD=true
 CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:8000
+LOG_LEVEL=INFO
+FRONTEND_DIR=frontend
 ```
 
 If `JWT_SECRET` is not set, the app creates a local `.jwt_secret` file
 automatically.
 
-### Spotify Account Connection
+### Spotify (Optional)
 
 Create an app in the Spotify Developer Dashboard and add this redirect URI:
 
@@ -122,7 +209,7 @@ Create an app in the Spotify Developer Dashboard and add this redirect URI:
 http://127.0.0.1:8000/api/spotify/callback
 ```
 
-Then add these values to `.env`:
+Add these values to `.env`:
 
 ```env
 SPOTIFY_CLIENT_ID=your-spotify-client-id
@@ -131,86 +218,103 @@ SPOTIFY_REDIRECT_URI=http://127.0.0.1:8000/api/spotify/callback
 SPOTIFY_TOKEN_ENCRYPTION_KEY=your-fernet-key
 ```
 
-Generate the token encryption key with:
+Generate the Fernet key with:
 
 ```powershell
 py -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 ```
 
-Restart the server after editing `.env`. Users can then use the `Connect
-Spotify` button in the header. Playback controls require a Spotify Premium
-account and an active Spotify device. Keep `SPOTIFY_TOKEN_ENCRYPTION_KEY`
-stable across restarts and deployments; changing it means existing Spotify
-connections cannot be decrypted and users will need to reconnect. If this env
-var is omitted, the app creates a local `.spotify_token_key` file for dev only.
+Restart the server after editing `.env`. Users can then click **Connect
+Spotify** in the header. Playback requires Spotify Premium and an active
+device. Keep `SPOTIFY_TOKEN_ENCRYPTION_KEY` stable across restarts — changing
+it means existing connections cannot be decrypted and users must reconnect.
+If omitted, the app creates a local `.spotify_token_key` file (dev only).
 
-The Spotify tab can search tracks/playlists, load the user's playlists, and
-send playback to a selected Spotify Connect device. If no device appears, open
-Spotify on desktop or mobile first, then refresh devices. Users who connected
-before playlist scopes were added should disconnect and reconnect Spotify.
+## API Surface
 
-## Run Tests
+Routers are mounted under `/api`:
 
-Install the development dependencies:
+| Prefix             | Purpose                                            |
+| ------------------ | -------------------------------------------------- |
+| `/api/auth`        | signup, login, `me`                                |
+| `/api/study`       | start research, generate flashcards + quiz, sessions |
+| `/api/upload`      | upload PDFs / PPTX / TXT / MD                      |
+| `/api/quiz`        | submit quiz (heals plant on correct, damages on wrong) |
+| `/api/plan`        | generate personalized study plan                   |
+| `/api/shop`        | coins, upgrades, study ticks                       |
+| `/api/profile`     | stats, quiz history, plant tier claims             |
+| `/api/plant`       | `POST /heal-flashcard` — heal from flashcard view  |
+| `/api/spotify`     | connect, search, playback, devices                 |
+| `/api/health`      | health check                                       |
 
-```bash
-python -m pip install -r requirements-dev.txt
-```
-
-Run the test suite:
-
-```bash
-python -m pytest
-```
-
-The tests use a temporary SQLite database and stubbed AI/search agents, so they
-do not use real Groq or Tavily credits.
-
-## Files Created Locally
-
-These are generated while running the app and should not be committed:
-
-- `.env` - local API keys
-- `.jwt_secret` - local JWT signing key
-- `.spotify_token_key` - local Spotify token encryption key, when not set in `.env`
-- `app.db` - SQLite database
-- `app.db-*` - SQLite WAL/journal files
-- `uploads/` - uploaded files
-- `.venv/` - local Python environment
+Auto-generated OpenAPI docs: `http://127.0.0.1:8000/docs`.
 
 ## Project Layout
 
 ```text
-main.py              FastAPI app and startup configuration
-frontend/            Static HTML, CSS, and JavaScript
-routers/             API routes for auth, study, upload, quiz, and plan
-services/            Database, auth, sessions, file parsing, and API clients
-agents/              AI/search backed study agents
-models/              Pydantic request schemas
-tests/               Pytest endpoint tests
-requirements.txt     Runtime dependencies
-requirements-dev.txt Test/development dependencies
+main.py                FastAPI app, router mounts, static file serving
+frontend/              Static HTML, CSS, and JavaScript (no build step)
+  index.html
+  app.js
+  style.css
+Sprites/               Plant sprite PNGs (per-tier skins)
+routers/               API routes
+  auth.py              signup / login / me
+  study.py             research + flashcard/quiz generation
+  upload.py            file uploads
+  quiz.py              quiz submit (with plant heal + wither)
+  plan.py              study plan generation
+  shop.py              coins, upgrades, study ticks
+  profile.py           user stats + plant tier claims
+  plant.py             plant heal endpoints (flashcard)
+  spotify.py           Spotify OAuth + playback proxy
+services/              Business logic
+  db.py                SQLite connection + schema
+  auth.py              JWT + bcrypt
+  session_store.py     study session CRUD
+  file_parser.py       PDF / PPTX / text extraction
+  groq_client.py       Groq LLM wrapper
+  shop.py              coin economy + upgrades
+  plant.py             XP, health, tiers, heal logic
+  spotify.py           Spotify OAuth + API client
+  exceptions.py        shared error types
+agents/                AI/search-backed study agents
+models/
+  schemas.py           Pydantic request/response models
+tests/                 Pytest endpoint tests (async, stubbed AI)
+requirements.txt       Runtime dependencies
+requirements-dev.txt   Test dependencies
 ```
+
+## Files Created Locally
+
+Generated while running the app — do not commit:
+
+- `.env` — local API keys
+- `.jwt_secret` — local JWT signing key
+- `.spotify_token_key` — local Spotify Fernet key (when not in `.env`)
+- `app.db`, `app.db-shm`, `app.db-wal` — SQLite database + WAL files
+- `uploads/` — uploaded files
+- `.venv/` — local Python environment
+- `__pycache__/` — Python bytecode caches
 
 ## Troubleshooting
 
 ### PowerShell Will Not Activate The Virtual Environment
 
-Run this once in PowerShell:
+Run once:
 
 ```powershell
 Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 ```
 
-Then try again:
+Then:
 
 ```powershell
 .\.venv\Scripts\Activate.ps1
 ```
 
 ### Port 8000 Is Already In Use
-
-Start on a different port:
 
 ```powershell
 $env:PORT="8001"
@@ -223,26 +327,22 @@ On macOS/Linux:
 PORT=8001 python main.py
 ```
 
-Then open:
-
-```text
-http://127.0.0.1:8001
-```
+Open `http://127.0.0.1:8001`.
 
 ### Missing API Key Errors
 
-Check that `.env` exists in the project root and contains:
-
-```env
-GROQ_API_KEY=...
-TAVILY_API_KEY=...
-```
-
-Restart the server after editing `.env`.
+Make sure `.env` exists in the project root with `GROQ_API_KEY` and
+`TAVILY_API_KEY` set, then restart the server.
 
 ### Frontend Looks Stale
 
-Hard refresh the browser:
+Hard-refresh the browser:
 
 - Windows/Linux: `Ctrl + Shift + R`
 - macOS: `Cmd + Shift + R`
+
+### Spotify "No Devices Found"
+
+Open Spotify on desktop or mobile first, then click **Refresh devices** in the
+Spotify tab. Users who connected before playlist scopes were added should
+disconnect and reconnect Spotify.

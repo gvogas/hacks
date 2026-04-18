@@ -1497,7 +1497,9 @@ function renderProfile() {
     else if (lvl.claimed) tag = 'Owned';
     else if (lvl.reached) tag = `+${lvl.coin_reward}`;
     else tag = `${lvl.min_xp}xp`;
+    const sprite = LEVEL_SPRITES[lvl.id] || FALLBACK_SPRITE;
     return `<button type="button" class="${classes.join(' ')}" onclick="selectLevel('${lvl.id}')">
+      <img class="level-tab-sprite" src="${sprite}" alt="" draggable="false">
       <span>${escHtml(lvl.name)}</span>
       <span class="level-tab-tag">${escHtml(tag)}</span>
     </button>`;
@@ -1534,8 +1536,10 @@ function renderLevelDescription(lvl) {
         : `<button class="profile-plant-claim-btn" onclick="claimLevel('${lvl.id}')">Claim +${lvl.coin_reward} coins &amp; skin</button>`)
     : `<button class="profile-plant-claim-btn" disabled>Locked — reach ${lvl.min_xp} XP</button>`;
 
+  const previewSprite = LEVEL_SPRITES[lvl.id] || FALLBACK_SPRITE;
   desc.innerHTML = `
     <div class="profile-plant-desc-title">${escHtml(lvl.name)}</div>
+    <img class="profile-plant-desc-preview" src="${previewSprite}" alt="${escHtml(lvl.name)} plant" draggable="false">
     <p class="profile-plant-desc-body">${escHtml(lvl.description)}</p>
     <div class="profile-plant-desc-meta">
       <span>Requires ${lvl.min_xp} XP</span>

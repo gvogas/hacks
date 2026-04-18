@@ -128,6 +128,33 @@ header {
 
 .header-btn:hover { background: rgba(255,255,255,0.28); }
 
+.header-util-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 600;
+}
+.header-util-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px; height: 18px;
+  border-radius: 999px;
+  background: #fbbf24;
+  color: #78350f;
+  font-size: 0.7rem;
+  font-weight: 800;
+  line-height: 1;
+}
+.header-util-icon.spotify { background: #1db954; color: white; }
+
+.header-divider {
+  width: 1px;
+  height: 22px;
+  background: rgba(255,255,255,0.35);
+  margin: 0 0.25rem;
+}
+
 header::after {
   content: '';
   position: absolute;
@@ -1982,6 +2009,24 @@ body.compact-mode .profile-stat strong { font-size: 1.1rem; }
 }
 
 .level-tab.equipped { box-shadow: 0 0 0 2px rgba(16,185,129,0.35); }
+
+.level-tab-sprite {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  flex-shrink: 0;
+}
+.level-tab.locked .level-tab-sprite { filter: grayscale(1) brightness(0.85); opacity: 0.75; }
+
+.profile-plant-desc-preview {
+  display: block;
+  width: 96px;
+  height: 96px;
+  margin: 0.4rem auto 0.6rem;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
 
 /* Plant skin filters (applied to any plant svg wrap) */
 .skin-default { filter: none; }
