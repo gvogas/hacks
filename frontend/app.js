@@ -979,11 +979,43 @@ function renderNotes(notes, topic) {
   }
 
   (notes.sections || []).forEach((sec, i) => {
+    // Generate image URL using multiple fallback sources
+    const searchQuery = sec.image_description 
+      ? sec.image_description.split(' ').slice(0, 3).join('+')
+      : sec.title.replace(/\s+/g, '+');
+    
+    // Create a hash for consistent seeding across sessions
+    const hash = Math.abs(searchQuery.split('').reduce((a, b) => {a = ((a << 5) - a) + b.charCodeAt(0); return a & a;}, 0));
+    
+    // Use multiple image services with fallbacks
+    const imageUrls = [
+      `https://api.unsplash.com/photos/random?query=${encodeURIComponent(searchQuery)}&w=400&h=300&fit=crop&client_id=YOUR_CLIENT_ID`,
+      `https://picsum.photos/400/300?random=${hash}`,
+      `https://source.unsplash.com/400x300/?${searchQuery}`,
+      'https://via.placeholder.com/400x300/5b5bf5/ffffff?text=Visual+Reference'
+    ];
+    
+    // Use a working fallback since Unsplash may block direct requests
+    const imageUrl = `https://picsum.photos/400/300?random=${hash + i}`;
+
     html += `<div class="accordion-item">
       <div class="accordion-header" onclick="toggleAccordion(${i})">
         ${escHtml(sec.title)} <span>+</span>
       </div>
-      <div class="accordion-body" id="acc-${i}">${escHtml(sec.content)}</div>
+      <div class="accordion-body" id="acc-${i}">
+        <div class="section-content">
+          <div class="section-text">${escHtml(sec.content)}</div>
+          <div class="section-image">
+            <img 
+              src="${imageUrl}" 
+              alt="Visual reference for ${escHtml(sec.title)}" 
+              loading="lazy"
+              onerror="this.src='https://via.placeholder.com/400x300/5b5bf5/ffffff?text=${encodeURIComponent((sec.title || 'Content').substring(0, 15).replace(/\s+/g, '+'))}'" 
+            />
+            ${sec.image_description ? `<p class="image-caption">${escHtml(sec.image_description)}</p>` : ''}
+          </div>
+        </div>
+      </div>
     </div>`;
   });
 

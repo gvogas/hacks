@@ -35,10 +35,13 @@ Return a JSON object with this exact structure:
   "sections": [
     {{
       "title": "Section Title",
-      "content": "Detailed explanation of this section..."
+      "content": "Detailed explanation of this section...",
+      "image_description": "Brief description of what image would visually represent this section for visual learners"
     }}
   ]
 }}
+
+For each section, provide a brief image_description that describes what visual element would help illustrate that concept.
 
 Research materials:
 {context}"""
