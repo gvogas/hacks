@@ -157,22 +157,22 @@ async function startResearch() {
       const form = new FormData();
       form.append('file', pendingFiles[0]);
       if (sessionId) form.append('session_id', sessionId);
-      const r = await fetch(API + '/api/upload', { method: 'POST', body: form }).then(r => r.json());
+      const r = await apiJson('/api/upload', { method: 'POST', body: form });
       setSession(r.session_id);
       for (let i = 1; i < pendingFiles.length; i++) {
         const f2 = new FormData();
         f2.append('file', pendingFiles[i]);
         f2.append('session_id', sessionId);
-        await fetch(API + '/api/upload', { method: 'POST', body: f2 });
+        await apiJson('/api/upload', { method: 'POST', body: f2 });
       }
       setStatus(status, 'Searching the web...');
     }
 
-    const res = await fetch(API + '/api/study/start', {
+    const res = await apiJson('/api/study/start', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ topic, session_id: sessionId }),
-    }).then(r => r.json());
+    });
 
     setSession(res.session_id);
     renderNotes(res.notes, topic);
@@ -180,11 +180,16 @@ async function startResearch() {
     markCompleted('research');
     updateTabLocks();
     setStatus(status, '');
-    toast('Notes ready! Taking you to the Notes tab.', 'success');
+    if (res.warnings?.length) {
+      console.warn(res.warnings.join('\n'));
+      toast('Notes ready, but web search was unavailable.', 'error');
+    } else {
+      toast('Notes ready! Taking you to the Notes tab.', 'success');
+    }
     setTimeout(() => switchTab('notes'), 600);
   } catch (err) {
     setStatus(status, 'Error: ' + err.message, true);
-    toast('Something went wrong — check the console.', 'error');
+    toast(err.message, 'error');
   } finally {
     btn.disabled = false;
   }
@@ -244,11 +249,11 @@ async function generateLearning() {
   setStatus(status, 'Generating flashcards and quiz...');
 
   try {
-    const res = await fetch(API + '/api/study/generate-learning', {
+    const res = await apiJson('/api/study/generate-learning', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ session_id: sessionId, num_flashcards: 10, num_questions: 5 }),
-    }).then(r => r.json());
+    });
 
     flashcards = res.flashcards || [];
     quizQuestions = res.quiz_questions || [];
@@ -262,7 +267,7 @@ async function generateLearning() {
     toast(`Created ${flashcards.length} flashcards and ${quizQuestions.length} quiz questions.`, 'success');
   } catch (err) {
     setStatus(status, 'Error: ' + err.message, true);
-    toast('Failed to generate — check the console.', 'error');
+    toast(err.message, 'error');
   } finally {
     btn.disabled = false;
   }
@@ -364,11 +369,11 @@ async function submitQuiz() {
   btn.disabled = true;
 
   try {
-    const res = await fetch(API + '/api/quiz/submit', {
+    const res = await apiJson('/api/quiz/submit', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ session_id: sessionId, answers }),
-    }).then(r => r.json());
+    });
 
     renderQuizResults(res);
     markCompleted('quiz');
@@ -412,11 +417,11 @@ async function generatePlan() {
   setStatus(status, 'Building your personalized study plan...');
 
   try {
-    const res = await fetch(API + '/api/plan/generate', {
+    const res = await apiJson('/api/plan/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ session_id: sessionId, available_days: days, hours_per_day: hours }),
-    }).then(r => r.json());
+    });
 
     renderPlan(res.plan || []);
     markCompleted('plan');
@@ -424,7 +429,7 @@ async function generatePlan() {
     toast('Study plan ready.', 'success');
   } catch (err) {
     setStatus(status, 'Error: ' + err.message, true);
-    toast('Failed to generate plan.', 'error');
+    toast(err.message, 'error');
   }
 }
 
@@ -459,6 +464,42 @@ function setStatus(el, msg, isError = false) {
   el.innerHTML = msg ? `<span class="spinner"></span>${escHtml(msg)}` : '';
   el.classList.toggle('error', isError);
   if (isError) el.textContent = msg;
+}
+
+async function apiJson(path, options = {}) {
+  const response = await fetch(API + path, options);
+  const text = await response.text();
+  let data = {};
+
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = { detail: text };
+    }
+  }
+
+  if (!response.ok) {
+    throw new Error(formatApiError(response, data));
+  }
+
+  return data;
+}
+
+function formatApiError(response, data) {
+  const detail = data.detail || data.message || response.statusText || 'Request failed';
+  if (Array.isArray(detail)) {
+    return `${response.status} ${detail.map(formatValidationError).join('; ')}`;
+  }
+  return `${response.status} ${detail}`;
+}
+
+function formatValidationError(err) {
+  if (err?.msg) {
+    const loc = Array.isArray(err.loc) ? err.loc.join('.') : '';
+    return loc ? `${loc}: ${err.msg}` : err.msg;
+  }
+  return String(err);
 }
 
 let toastTimer;

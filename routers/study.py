@@ -4,6 +4,7 @@ from agents.research_agent import ResearchAgent
 from agents.content_agent import ContentAgent
 from agents.learning_agent import LearningAgent
 from services import session_store
+from services.exceptions import ExternalServiceError
 
 router = APIRouter()
 research_agent = ResearchAgent()
@@ -15,14 +16,23 @@ learning_agent = LearningAgent()
 async def study_start(req: StudyStartRequest):
     session_id = session_store.ensure_session(req.session_id)
 
-    search_results = await research_agent.run(req.topic)
+    warnings = []
+    try:
+        search_results = await research_agent.run(req.topic)
+    except ExternalServiceError as exc:
+        search_results = []
+        warnings.append(str(exc))
+
     session = session_store.get_session(session_id)
     uploaded_texts = session.get("uploaded_texts", [])
 
-    notes = await content_agent.run(req.topic, search_results, uploaded_texts)
+    try:
+        notes = await content_agent.run(req.topic, search_results, uploaded_texts)
+    except ExternalServiceError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
 
     session_store.update_session(session_id, {"topic": req.topic, "notes": notes})
-    return {"session_id": session_id, "notes": notes}
+    return {"session_id": session_id, "notes": notes, "warnings": warnings}
 
 
 @router.post("/generate-learning")
@@ -33,11 +43,14 @@ async def generate_learning(req: GenerateLearningRequest):
     if not session.get("notes"):
         raise HTTPException(status_code=400, detail="No notes found. Run /study/start first.")
 
-    result = await learning_agent.run(
-        session["notes"],
-        num_flashcards=req.num_flashcards,
-        num_questions=req.num_questions,
-    )
+    try:
+        result = await learning_agent.run(
+            session["notes"],
+            num_flashcards=req.num_flashcards,
+            num_questions=req.num_questions,
+        )
+    except ExternalServiceError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
 
     session_store.update_session(req.session_id, {
         "flashcards": result.get("flashcards", []),

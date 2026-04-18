@@ -18,7 +18,10 @@ async def upload_file(
 
     session_id = session_store.ensure_session(session_id)
     data = await file.read()
-    text = extract_text(data, file.filename)
+    try:
+        text = extract_text(data, file.filename)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"Could not read {file.filename}.") from exc
 
     session = session_store.get_session(session_id)
     existing = session.get("uploaded_texts", [])

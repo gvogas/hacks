@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException
 from models.schemas import PlanGenerateRequest
 from agents.planning_agent import PlanningAgent
 from services import session_store
+from services.exceptions import ExternalServiceError
 
 router = APIRouter()
 planning_agent = PlanningAgent()
@@ -20,12 +21,15 @@ async def generate_plan(req: PlanGenerateRequest):
     if latest_history:
         weak_topics = latest_history[-1].get("weak_topics", [])
 
-    plan = await planning_agent.run(
-        notes=session["notes"],
-        weak_topics=weak_topics,
-        available_days=req.available_days,
-        hours_per_day=req.hours_per_day,
-    )
+    try:
+        plan = await planning_agent.run(
+            notes=session["notes"],
+            weak_topics=weak_topics,
+            available_days=req.available_days,
+            hours_per_day=req.hours_per_day,
+        )
+    except ExternalServiceError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
 
     session_store.update_session(req.session_id, {"study_plan": plan})
     return {"session_id": req.session_id, **plan}

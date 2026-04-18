@@ -1,5 +1,6 @@
 import os
 from groq import Groq
+from services.exceptions import ExternalServiceError
 
 _client = None
 
@@ -7,7 +8,13 @@ _client = None
 def get_groq_client() -> Groq:
     global _client
     if _client is None:
-        _client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+        api_key = os.getenv("GROQ_API_KEY")
+        if not api_key:
+            raise ExternalServiceError(
+                "Groq",
+                "GROQ_API_KEY is not configured.",
+            )
+        _client = Groq(api_key=api_key)
     return _client
 
 
@@ -19,5 +26,11 @@ def chat_completion(messages: list, json_mode: bool = True) -> str:
     }
     if json_mode:
         kwargs["response_format"] = {"type": "json_object"}
-    response = client.chat.completions.create(**kwargs)
-    return response.choices[0].message.content
+    try:
+        response = client.chat.completions.create(**kwargs)
+        return response.choices[0].message.content
+    except Exception as exc:
+        raise ExternalServiceError(
+            "Groq",
+            "Groq request failed. Check GROQ_API_KEY, GROQ_MODEL, and network/proxy settings.",
+        ) from exc
