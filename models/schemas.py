@@ -51,3 +51,17 @@ class StudyTickRequest(BaseModel):
 
 class PurchaseUpgradeRequest(BaseModel):
     upgrade_id: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=80)]
+
+
+class SpotifyPlayRequest(BaseModel):
+    context_uri: Optional[Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=300)]] = None
+    uris: list[Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=300)]] = Field(
+        default_factory=list,
+        max_length=50,
+    )
+    device_id: Optional[Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=300)]] = None
+
+
+class SpotifyTransferRequest(BaseModel):
+    device_id: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=300)]
+    play: bool = False

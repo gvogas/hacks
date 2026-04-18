@@ -15,6 +15,7 @@ import pytest
 os.environ.setdefault("JWT_SECRET", "test-secret-" + "x" * 40)
 os.environ.setdefault("GROQ_API_KEY", "test-groq-key")
 os.environ.setdefault("TAVILY_API_KEY", "test-tavily-key")
+os.environ.setdefault("SPOTIFY_TOKEN_ENCRYPTION_KEY", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=")
 
 ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:

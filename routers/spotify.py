@@ -1,0 +1,128 @@
+import logging
+import os
+from urllib.parse import urlencode
+
+from fastapi import APIRouter, Body, HTTPException, Query, Request
+from fastapi.responses import JSONResponse, RedirectResponse
+
+from models.schemas import SpotifyPlayRequest, SpotifyTransferRequest
+from services import auth, spotify
+from services.exceptions import ExternalServiceError
+
+router = APIRouter()
+logger = logging.getLogger(__name__)
+COOKIE_NAME = "spotify_oauth_nonce"
+
+
+@router.get("/status")
+async def status(user: dict = auth.CurrentUser):
+    return spotify.get_status(user["id"])
+
+
+@router.post("/connect")
+async def connect(user: dict = auth.CurrentUser):
+    authorization = spotify.build_authorization(user["id"])
+    response = JSONResponse({"auth_url": authorization["auth_url"]})
+    response.set_cookie(
+        COOKIE_NAME,
+        authorization["nonce"],
+        max_age=spotify.STATE_TTL_MINUTES * 60,
+        path="/api/spotify",
+        secure=_cookie_secure(),
+        httponly=True,
+        samesite="lax",
+    )
+    return response
+
+
+@router.get("/callback", include_in_schema=False)
+async def callback(request: Request, code: str | None = None, state: str | None = None, error: str | None = None):
+    redirect_to = _spotify_return_url("connected")
+    if error:
+        redirect_to = _spotify_return_url("denied", "Spotify authorization was cancelled or denied.")
+    else:
+        try:
+            spotify.complete_authorization(code, state, request.cookies.get(COOKIE_NAME))
+        except HTTPException as exc:
+            logger.warning("Spotify OAuth callback failed", exc_info=True)
+            redirect_to = _spotify_return_url("error", str(exc.detail))
+        except ExternalServiceError as exc:
+            logger.warning("Spotify OAuth callback failed", exc_info=True)
+            redirect_to = _spotify_return_url("error", str(exc))
+        except Exception:
+            logger.exception("Unexpected Spotify OAuth callback failure")
+            redirect_to = _spotify_return_url("error", "Unexpected Spotify callback failure. Check server logs.")
+
+    response = RedirectResponse(redirect_to, status_code=303)
+    response.delete_cookie(COOKIE_NAME, path="/api/spotify")
+    return response
+
+
+@router.post("/disconnect")
+async def disconnect(user: dict = auth.CurrentUser):
+    return spotify.disconnect(user["id"])
+
+
+@router.get("/devices")
+async def devices(user: dict = auth.CurrentUser):
+    return spotify.get_available_devices(user["id"])
+
+
+@router.get("/search")
+async def search(
+    q: str = Query(default="", max_length=120),
+    limit: int = Query(default=8, ge=1, le=20),
+    user: dict = auth.CurrentUser,
+):
+    return spotify.search_catalog(user["id"], q, limit=limit)
+
+
+@router.get("/playlists")
+async def playlists(limit: int = Query(default=20, ge=1, le=50), user: dict = auth.CurrentUser):
+    return spotify.get_user_playlists(user["id"], limit=limit)
+
+
+@router.get("/current")
+async def current(user: dict = auth.CurrentUser):
+    return spotify.get_current_playback(user["id"])
+
+
+@router.put("/transfer")
+async def transfer(req: SpotifyTransferRequest, user: dict = auth.CurrentUser):
+    return spotify.transfer_playback(user["id"], req.device_id, play=req.play)
+
+
+@router.put("/play")
+async def play(req: SpotifyPlayRequest | None = Body(default=None), user: dict = auth.CurrentUser):
+    return spotify.start_or_resume_playback(
+        user["id"],
+        context_uri=req.context_uri if req else None,
+        uris=req.uris if req else None,
+        device_id=req.device_id if req else None,
+    )
+
+
+@router.put("/pause")
+async def pause(user: dict = auth.CurrentUser):
+    return spotify.pause_playback(user["id"])
+
+
+@router.post("/next")
+async def next_track(user: dict = auth.CurrentUser):
+    return spotify.next_track(user["id"])
+
+
+@router.post("/previous")
+async def previous_track(user: dict = auth.CurrentUser):
+    return spotify.previous_track(user["id"])
+
+
+def _cookie_secure() -> bool:
+    return os.getenv("SPOTIFY_COOKIE_SECURE", "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _spotify_return_url(result: str, detail: str | None = None) -> str:
+    params = {"spotify": result}
+    if detail:
+        params["spotify_detail"] = detail[:240]
+    return "/?" + urlencode(params)

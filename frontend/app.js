@@ -9,19 +9,20 @@ let quizQuestions = [];
 let shopState = null;
 let studyTickTimer = null;
 let lastStudyTickMs = null;
-let studyTickInFlight = false;
-let pendingPurchaseUpgradeId = null;
-
-const STUDY_TICK_INTERVAL_MS = 60_000;
-const MIN_STUDY_TICK_SECONDS = 30;
-const MAX_STUDY_TICK_SECONDS = 300;
+let bgMusic = null;
+let isMusicPlaying = false;
+let musicSetupDone = false;
+let spotifyState = null;
+let spotifySetupDone = false;
+let spotifyDevices = [];
+let selectedSpotifyDeviceId = localStorage.getItem('spotify_device_id') || '';
 
 const state = {
   notes: false,
   learning: false,
 };
 
-// Auth
+// ── Auth ─────────────────────────────────────────────────────────────────────
 
 function showAuth() {
   document.getElementById('auth-overlay').style.display = 'flex';
@@ -39,6 +40,15 @@ function showApp() {
     document.getElementById('session-badge').textContent = 'session: ' + sessionId.slice(0, 8);
   }
   renderCoinBadge();
+  if (!musicSetupDone) {
+    setupMusic();
+    musicSetupDone = true;
+  }
+  if (!spotifySetupDone) {
+    setupSpotifyControls();
+    spotifySetupDone = true;
+  }
+  loadSpotifyStatus();
 }
 
 function toggleAuthMode() {
@@ -109,7 +119,393 @@ document.getElementById('auth-email')?.addEventListener('keydown', e => {
   if (e.key === 'Enter') { e.preventDefault(); document.getElementById('auth-password').focus(); }
 });
 
-// History sidebar
+// ── Music ────────────────────────────────────────────────────────────────────
+
+function setupMusic() {
+  // Create audio element
+  // NOTE: Add an audio file to `frontend/audio/background-music.mp3`
+  bgMusic = new Audio('/audio/new-track.mp3'); // <-- Point this to your new audio file
+  bgMusic.loop = true;
+  bgMusic.volume = 0.2;
+
+  // Create toggle button
+  const musicBtn = document.createElement('button');
+  musicBtn.id = 'music-toggle-btn';
+  musicBtn.className = 'header-btn';
+  musicBtn.title = 'Toggle background music';
+  musicBtn.innerHTML = '<span>🎵</span> Music Off';
+  musicBtn.addEventListener('click', toggleMusic);
+
+  // Add to header
+  const headerRight = document.querySelector('.header-right');
+  if (headerRight) {
+    const logoutBtn = headerRight.querySelector('button[onclick="logout()"]');
+    if (logoutBtn) {
+      headerRight.insertBefore(musicBtn, logoutBtn);
+    } else {
+      headerRight.appendChild(musicBtn);
+    }
+  }
+
+  // Load preference
+  if (localStorage.getItem('music_enabled') === 'true') {
+    playMusic();
+  }
+}
+
+function playMusic() {
+  if (!bgMusic) return;
+  const playPromise = bgMusic.play();
+
+  if (playPromise !== undefined) {
+    playPromise.then(_ => {
+      isMusicPlaying = true;
+      const btn = document.getElementById('music-toggle-btn');
+      btn.innerHTML = '<span>🎵</span> Music On';
+      btn.classList.add('playing');
+      localStorage.setItem('music_enabled', 'true');
+    }).catch(error => {
+      console.warn("Music autoplay was blocked by the browser.");
+      // If autoplay fails, ensure state is correct
+      pauseMusic();
+    });
+  }
+}
+
+function pauseMusic() {
+  if (!bgMusic) return;
+  bgMusic.pause();
+  isMusicPlaying = false;
+  const btn = document.getElementById('music-toggle-btn');
+  if (btn) {
+    btn.innerHTML = '<span>🎵</span> Music Off';
+    btn.classList.remove('playing');
+  }
+  localStorage.setItem('music_enabled', 'false');
+}
+
+function toggleMusic() {
+  if (isMusicPlaying) {
+    pauseMusic();
+  } else {
+    playMusic();
+  }
+}
+
+function setupSpotifyControls() {
+  const headerRight = document.querySelector('.header-right');
+  if (!headerRight || document.getElementById('spotify-controls')) return;
+
+  const group = document.createElement('div');
+  group.id = 'spotify-controls';
+  group.className = 'spotify-controls';
+
+  const connectBtn = document.createElement('button');
+  connectBtn.id = 'spotify-connect-btn';
+  connectBtn.className = 'header-btn spotify-btn';
+  connectBtn.type = 'button';
+  connectBtn.title = 'Connect Spotify';
+  connectBtn.textContent = 'Connect Spotify';
+  connectBtn.addEventListener('click', handleSpotifyConnectButton);
+
+  const playBtn = spotifyControlButton('spotify-play-btn', 'Play', 'Resume Spotify playback', () => spotifyCommand('play'));
+  const pauseBtn = spotifyControlButton('spotify-pause-btn', 'Pause', 'Pause Spotify playback', () => spotifyCommand('pause'));
+  const nextBtn = spotifyControlButton('spotify-next-btn', 'Next', 'Skip to next Spotify track', () => spotifyCommand('next'));
+
+  group.append(connectBtn, playBtn, pauseBtn, nextBtn);
+
+  const logoutBtn = headerRight.querySelector('#logout-btn') || headerRight.querySelector('button[onclick="logout()"]');
+  if (logoutBtn) headerRight.insertBefore(group, logoutBtn);
+  else headerRight.appendChild(group);
+
+  renderSpotifyControls();
+}
+
+function spotifyControlButton(id, text, title, handler) {
+  const btn = document.createElement('button');
+  btn.id = id;
+  btn.className = 'header-btn spotify-playback-btn';
+  btn.type = 'button';
+  btn.title = title;
+  btn.textContent = text;
+  btn.addEventListener('click', handler);
+  return btn;
+}
+
+async function loadSpotifyStatus() {
+  if (!authToken || !document.getElementById('spotify-controls')) return;
+  try {
+    spotifyState = await apiJson('/api/spotify/status', { method: 'GET' });
+    renderSpotifyControls();
+  } catch (err) {
+    console.warn('Could not load Spotify status:', err.message);
+  }
+}
+
+function renderSpotifyControls() {
+  const connectBtn = document.getElementById('spotify-connect-btn');
+  const playbackBtns = document.querySelectorAll('.spotify-playback-btn');
+  if (!connectBtn) return;
+
+  const connected = !!spotifyState?.connected;
+  connectBtn.disabled = false;
+  connectBtn.classList.toggle('connected', connected);
+  connectBtn.textContent = connected
+    ? `Spotify: ${spotifyState.display_name || 'Connected'}`
+    : (spotifyState?.configured === false ? 'Set up Spotify' : 'Connect Spotify');
+  connectBtn.title = connected ? 'Disconnect Spotify' : 'Connect Spotify';
+  playbackBtns.forEach(btn => { btn.style.display = connected ? 'inline-flex' : 'none'; });
+  renderSpotifyDevices();
+}
+
+async function handleSpotifyConnectButton() {
+  if (spotifyState?.connected) {
+    await disconnectSpotify();
+  } else {
+    await connectSpotify();
+  }
+}
+
+async function connectSpotify() {
+  const btn = document.getElementById('spotify-connect-btn');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Connecting...';
+  }
+
+  try {
+    const res = await apiJson('/api/spotify/connect', { method: 'POST' });
+    window.location.href = res.auth_url;
+  } catch (err) {
+    toast('Spotify connect failed: ' + err.message, 'error');
+    renderSpotifyControls();
+  }
+}
+
+async function disconnectSpotify() {
+  if (!confirm('Disconnect Spotify from this account?')) return;
+  try {
+    spotifyState = await apiJson('/api/spotify/disconnect', { method: 'POST' });
+    renderSpotifyControls();
+    toast('Spotify disconnected.', 'success');
+  } catch (err) {
+    toast('Spotify disconnect failed: ' + err.message, 'error');
+  }
+}
+
+async function spotifyCommand(action) {
+  const endpoints = {
+    play: { path: '/api/spotify/play', method: 'PUT', label: 'Playback resumed.' },
+    pause: { path: '/api/spotify/pause', method: 'PUT', label: 'Playback paused.' },
+    next: { path: '/api/spotify/next', method: 'POST', label: 'Skipped track.' },
+  };
+  const endpoint = endpoints[action];
+  if (!endpoint) return;
+
+  try {
+    const options = { method: endpoint.method };
+    if (action === 'play' && selectedSpotifyDeviceId) {
+      options.body = JSON.stringify({ device_id: selectedSpotifyDeviceId });
+    }
+    await apiJson(endpoint.path, options);
+    toast(endpoint.label, 'success');
+  } catch (err) {
+    toast('Spotify command failed: ' + err.message, 'error');
+  }
+}
+
+function handleSpotifyReturn() {
+  const params = new URLSearchParams(window.location.search);
+  const result = params.get('spotify');
+  if (!result) return;
+  const detail = params.get('spotify_detail');
+
+  history.replaceState({}, document.title, window.location.pathname + window.location.hash);
+  if (result === 'connected') {
+    toast('Spotify connected.', 'success');
+    loadSpotifyStatus();
+  } else if (result === 'denied') {
+    toast(detail || 'Spotify connection was cancelled.', 'error');
+  } else {
+    toast(detail ? 'Spotify connection failed: ' + detail : 'Spotify connection failed. Check your Spotify settings.', 'error');
+  }
+}
+
+async function loadSpotifyDevices() {
+  const status = document.getElementById('spotify-status');
+  if (!authToken) return;
+  if (!spotifyState?.connected) {
+    setStatus(status, 'Connect Spotify first.', true);
+    return;
+  }
+
+  setStatus(status, 'Loading devices...');
+  try {
+    const res = await apiJson('/api/spotify/devices', { method: 'GET' });
+    spotifyDevices = res.devices || [];
+    const selectedExists = spotifyDevices.some(device => device.id === selectedSpotifyDeviceId);
+    const activeDevice = spotifyDevices.find(device => device.is_active && device.id);
+    if (!selectedExists) {
+      selectedSpotifyDeviceId = activeDevice?.id || spotifyDevices.find(device => device.id)?.id || '';
+      if (selectedSpotifyDeviceId) localStorage.setItem('spotify_device_id', selectedSpotifyDeviceId);
+    }
+    renderSpotifyDevices();
+    setStatus(status, '');
+  } catch (err) {
+    setStatus(status, 'Could not load Spotify devices: ' + err.message, true);
+  }
+}
+
+function renderSpotifyDevices() {
+  const list = document.getElementById('spotify-device-list');
+  const summary = document.getElementById('spotify-device-summary');
+  if (!list || !summary) return;
+
+  if (!spotifyState?.connected) {
+    summary.textContent = 'Spotify not connected';
+    list.innerHTML = '<div class="spotify-empty">Connect Spotify from the header first.</div>';
+    return;
+  }
+
+  if (!spotifyDevices.length) {
+    summary.textContent = 'No device selected';
+    list.innerHTML = '<div class="spotify-empty">No Spotify devices found. Open Spotify on desktop or mobile, then refresh.</div>';
+    return;
+  }
+
+  const selected = spotifyDevices.find(device => device.id === selectedSpotifyDeviceId);
+  summary.textContent = selected ? `${selected.name} (${selected.type})` : 'Choose a device';
+  list.innerHTML = spotifyDevices.map(device => {
+    const disabled = !device.id || device.is_restricted;
+    const active = device.id === selectedSpotifyDeviceId;
+    return `<button type="button" class="spotify-device ${active ? 'selected' : ''}" data-device-id="${escHtml(device.id || '')}" ${disabled ? 'disabled' : ''}>
+      <span>${escHtml(device.name || 'Unnamed device')}</span>
+      <small>${escHtml(device.type || 'Device')}${device.is_active ? ' - active' : ''}</small>
+    </button>`;
+  }).join('');
+
+  list.querySelectorAll('.spotify-device').forEach(btn => {
+    btn.addEventListener('click', () => selectSpotifyDevice(btn.dataset.deviceId));
+  });
+}
+
+async function selectSpotifyDevice(deviceId) {
+  if (!deviceId) return;
+  selectedSpotifyDeviceId = deviceId;
+  localStorage.setItem('spotify_device_id', deviceId);
+  renderSpotifyDevices();
+
+  try {
+    await apiJson('/api/spotify/transfer', {
+      method: 'PUT',
+      body: JSON.stringify({ device_id: deviceId, play: false }),
+    });
+    toast('Spotify device selected.', 'success');
+  } catch (err) {
+    toast('Device selected, but transfer failed: ' + err.message, 'error');
+  }
+}
+
+async function searchSpotify() {
+  const input = document.getElementById('spotify-search-input');
+  const query = input?.value.trim();
+  const status = document.getElementById('spotify-status');
+  if (!query) {
+    setStatus(status, 'Enter a playlist or song name.', true);
+    input?.focus();
+    return;
+  }
+
+  setStatus(status, 'Searching Spotify...');
+  try {
+    const res = await apiJson('/api/spotify/search?q=' + encodeURIComponent(query), { method: 'GET' });
+    renderSpotifyResults(res);
+    setStatus(status, '');
+  } catch (err) {
+    setStatus(status, 'Spotify search failed: ' + err.message, true);
+  }
+}
+
+async function loadSpotifyPlaylists() {
+  const status = document.getElementById('spotify-status');
+  setStatus(status, 'Loading playlists...');
+  try {
+    const res = await apiJson('/api/spotify/playlists', { method: 'GET' });
+    renderSpotifyResults({ tracks: [], playlists: res.playlists || [] });
+    setStatus(status, '');
+  } catch (err) {
+    setStatus(status, 'Could not load playlists: ' + err.message, true);
+  }
+}
+
+function renderSpotifyResults(res) {
+  const container = document.getElementById('spotify-results');
+  if (!container) return;
+  const tracks = res.tracks || [];
+  const playlists = res.playlists || [];
+  if (!tracks.length && !playlists.length) {
+    container.innerHTML = '<div class="spotify-empty">No Spotify results found.</div>';
+    return;
+  }
+
+  let html = '';
+  if (playlists.length) {
+    html += '<h3>Playlists</h3>';
+    html += playlists.map(item => spotifyResultCard(item, 'playlist')).join('');
+  }
+  if (tracks.length) {
+    html += '<h3>Songs</h3>';
+    html += tracks.map(item => spotifyResultCard(item, 'track')).join('');
+  }
+  container.innerHTML = html;
+  container.querySelectorAll('[data-spotify-play]').forEach(btn => {
+    btn.addEventListener('click', () => playSpotifyItem(btn.dataset.spotifyKind, btn.dataset.spotifyUri));
+  });
+}
+
+function spotifyResultCard(item, kind) {
+  const subtitle = kind === 'track'
+    ? [item.artist, item.album].filter(Boolean).join(' - ')
+    : [item.owner, item.tracks_total ? `${item.tracks_total} tracks` : ''].filter(Boolean).join(' - ');
+  const art = item.image_url
+    ? `<img src="${escHtml(item.image_url)}" alt="" loading="lazy" />`
+    : '<div class="spotify-art-placeholder"></div>';
+  return `<article class="spotify-result">
+    <div class="spotify-art">${art}</div>
+    <div class="spotify-result-info">
+      <strong>${escHtml(item.name)}</strong>
+      <span>${escHtml(subtitle || (kind === 'track' ? 'Song' : 'Playlist'))}</span>
+    </div>
+    <button class="btn-secondary" type="button" data-spotify-play="1" data-spotify-kind="${kind}" data-spotify-uri="${escHtml(item.uri || '')}" ${item.uri ? '' : 'disabled'}>
+      Play
+    </button>
+  </article>`;
+}
+
+async function playSpotifyItem(kind, uri) {
+  const status = document.getElementById('spotify-status');
+  if (!uri) return;
+  const body = kind === 'track' ? { uris: [uri] } : { context_uri: uri };
+  if (selectedSpotifyDeviceId) body.device_id = selectedSpotifyDeviceId;
+
+  setStatus(status, 'Starting Spotify playback...');
+  try {
+    await apiJson('/api/spotify/play', {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    });
+    setStatus(status, '');
+    toast('Spotify playback started.', 'success');
+  } catch (err) {
+    setStatus(status, 'Spotify play failed: ' + err.message, true);
+  }
+}
+
+document.getElementById('spotify-search-input')?.addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); searchSpotify(); }
+});
+
+// ── History sidebar ──────────────────────────────────────────────────────────
 
 async function loadSessionList() {
   try {
@@ -128,7 +524,7 @@ function renderSessionList(sessions) {
   }
   list.innerHTML = sessions.map(s => `
     <div class="history-item ${s.session_id === sessionId ? 'active' : ''}" data-id="${escHtml(s.session_id)}">
-      <button type="button" class="delete-btn" title="Delete" onclick="deleteSessionConfirm(event, '${escHtml(s.session_id)}')">&times;</button>
+      <button type="button" class="delete-btn" title="Delete" onclick="deleteSessionConfirm(event, '${escHtml(s.session_id)}')">×</button>
       <span class="topic">${escHtml(s.topic || 'Untitled')}</span>
       <span class="meta">${formatDate(s.updated_at)}</span>
     </div>
@@ -201,7 +597,7 @@ async function deleteSessionConfirm(e, id) {
   }
 }
 
-// Session
+// ── Session ──────────────────────────────────────────────────────────────────
 
 function setSession(id) {
   sessionId = id;
@@ -221,7 +617,7 @@ function resetSession() {
   location.reload();
 }
 
-// Tab switching & locking
+// ── Tab switching & locking ──────────────────────────────────────────────────
 
 function isTabUnlocked(btn) {
   const req = btn.dataset.requires;
@@ -264,10 +660,13 @@ function switchTab(name) {
   document.querySelectorAll('.tab-section').forEach(s => {
     s.classList.toggle('active', s.id === 'tab-' + name);
   });
+  if (name === 'spotify') {
+    loadSpotifyStatus().then(() => loadSpotifyDevices());
+  }
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// File upload
+// ── File upload ───────────────────────────────────────────────────────────────
 
 const pendingFiles = [];
 
@@ -283,7 +682,7 @@ function renderFileList() {
   list.innerHTML = pendingFiles.map((f, i) => `
     <span class="file-chip">
       ${escHtml(f.name)}
-      <button type="button" onclick="removeFile(${i})" title="Remove" aria-label="Remove ${escHtml(f.name)}">&times;</button>
+      <button type="button" onclick="removeFile(${i})" title="Remove" aria-label="Remove ${escHtml(f.name)}">×</button>
     </span>
   `).join('');
 }
@@ -318,13 +717,13 @@ if (uploadArea) {
     for (const f of e.dataTransfer.files) {
       const ok = allowed.some(ext => f.name.toLowerCase().endsWith(ext));
       if (ok) pendingFiles.push(f);
-      else toast(`Skipped "${f.name}" - unsupported type.`, 'error');
+      else toast(`Skipped "${f.name}" — unsupported type.`, 'error');
     }
     renderFileList();
   });
 }
 
-// Research
+// ── Research ──────────────────────────────────────────────────────────────────
 
 async function startResearch() {
   const topic = document.getElementById('topic-input').value.trim();
@@ -387,14 +786,14 @@ document.getElementById('topic-input')?.addEventListener('keydown', e => {
   if (e.key === 'Enter') { e.preventDefault(); startResearch(); }
 });
 
-// Notes
+// ── Notes ─────────────────────────────────────────────────────────────────────
 
 function renderNotes(notes, topic) {
   const container = document.getElementById('notes-content');
   const genBtn = document.getElementById('generate-learning-btn');
 
   let html = `<div class="notes-summary">
-    <h3>Summary - ${escHtml(topic)}</h3>
+    <h3>Summary — ${escHtml(topic)}</h3>
     <p>${escHtml(notes.summary || '')}</p>
   </div>`;
 
@@ -424,39 +823,21 @@ function toggleAccordion(i) {
   const body = document.getElementById('acc-' + i);
   const header = body.previousElementSibling;
   const isOpen = body.classList.toggle('open');
-  header.querySelector('span').textContent = isOpen ? '-' : '+';
+  header.querySelector('span').textContent = isOpen ? '−' : '+';
 }
 
-// Flashcards & Quiz generation
+// ── Flashcards & Quiz generation ─────────────────────────────────────────────
 
 async function generateLearning() {
   const btn = document.getElementById('generate-learning-btn');
   const status = document.getElementById('learning-status');
-  const flashcardsInput = document.getElementById('flashcards-count');
-  const quizInput = document.getElementById('quiz-count');
-  const difficultySelect = document.getElementById('difficulty-select');
-
-  let numFlashcards = parseInt(flashcardsInput.value, 10);
-  let numQuestions = parseInt(quizInput.value, 10);
-  let difficulty = difficultySelect.value;
-
-  if (Number.isNaN(numFlashcards) || numFlashcards < 1) numFlashcards = 10;
-  if (Number.isNaN(numQuestions) || numQuestions < 1) numQuestions = 5;
-  numFlashcards = Math.min(Math.max(numFlashcards, 1), 30);
-  numQuestions = Math.min(Math.max(numQuestions, 1), 20);
-
   btn.disabled = true;
   setStatus(status, 'Generating flashcards and quiz...');
 
   try {
     const res = await apiJson('/api/study/generate-learning', {
       method: 'POST',
-      body: JSON.stringify({
-        session_id: sessionId,
-        num_flashcards: numFlashcards,
-        num_questions: numQuestions,
-        difficulty: difficulty,
-      }),
+      body: JSON.stringify({ session_id: sessionId, num_flashcards: 10, num_questions: 5 }),
     });
 
     flashcards = res.flashcards || [];
@@ -481,7 +862,7 @@ async function generateLearning() {
   }
 }
 
-// Flashcards
+// ── Flashcards ────────────────────────────────────────────────────────────────
 
 function renderFlashcards() {
   if (!flashcards.length) return;
@@ -535,7 +916,7 @@ document.addEventListener('keydown', e => {
   }
 });
 
-// Quiz
+// ── Quiz ──────────────────────────────────────────────────────────────────────
 
 function renderQuiz() {
   if (!quizQuestions.length) return;
@@ -544,19 +925,13 @@ function renderQuiz() {
 
   let html = '';
   quizQuestions.forEach((q, idx) => {
-    // Capitalize first letter, lowercase the rest
-    const formattedQuestion = q.question.charAt(0).toUpperCase() + q.question.slice(1).toLowerCase();
     html += `<div class="quiz-question">
-      <p>Q${idx + 1}. ${escHtml(formattedQuestion)}</p>`;
+      <p>Q${idx + 1}. ${escHtml(q.question)}</p>`;
     (q.options || []).forEach(opt => {
       const letter = opt.charAt(0);
-      const rest = opt.slice(1).trimStart();
-      const [, separator = '', text = rest] = rest.match(/^([\).]?\s*)(.*)$/) || [];
-      const normalizedText = text.toLowerCase();
-      const formattedOption = `${letter}${separator}${normalizedText}`;
       html += `<label class="option-label">
         <input type="radio" name="q${q.id}" value="${escHtml(letter)}" />
-        ${escHtml(formattedOption)}
+        ${escHtml(opt)}
       </label>`;
     });
     html += `</div>`;
@@ -613,7 +988,7 @@ function renderQuizResults(res) {
     html += `<div class="quiz-result-item ${r.is_correct ? 'correct' : 'wrong'}">
       <strong>${escHtml(r.question)}</strong><br/>
       Your answer: <strong>${escHtml(r.selected)}</strong>
-      ${!r.is_correct ? ` - Correct: <strong>${escHtml(r.correct_answer)}</strong>` : ' &#10003;'}
+      ${!r.is_correct ? ` — Correct: <strong>${escHtml(r.correct_answer)}</strong>` : ' ✓'}
       <br/><em>${escHtml(r.explanation)}</em>
     </div>`;
   });
@@ -622,7 +997,7 @@ function renderQuizResults(res) {
   document.getElementById('quiz-results').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-// Study Plan
+// ── Study Plan ────────────────────────────────────────────────────────────────
 
 async function generatePlan() {
   const days = parseInt(document.getElementById('days-input').value) || 7;
@@ -654,7 +1029,7 @@ function renderPlan(plan) {
   let html = '';
   plan.forEach(day => {
     html += `<div class="plan-day">
-      <div class="plan-day-header">Day ${day.day}${day.focus ? ' - ' + escHtml(day.focus) : ''}</div>`;
+      <div class="plan-day-header">Day ${day.day}${day.focus ? ' — ' + escHtml(day.focus) : ''}</div>`;
     (day.tasks || []).forEach(task => {
       const priority = (task.priority || 'medium').toLowerCase();
       html += `<div class="plan-task">
@@ -677,16 +1052,12 @@ function renderPlan(plan) {
 async function loadShopState() {
   if (!authToken) return;
   try {
-    setShopState(await apiJson('/api/shop/state', { method: 'GET' }));
+    shopState = await apiJson('/api/shop/state', { method: 'GET' });
+    renderCoinBadge();
+    renderShop();
   } catch (err) {
     console.warn('Could not load shop state:', err.message);
   }
-}
-
-function setShopState(nextState) {
-  shopState = nextState;
-  renderCoinBadge();
-  renderShop();
 }
 
 function renderCoinBadge() {
@@ -712,9 +1083,8 @@ function renderShop() {
 
   grid.innerHTML = (shopState.upgrades || []).map(upgrade => {
     const pct = Math.round((upgrade.level / upgrade.max_level) * 100);
-    const isBuying = pendingPurchaseUpgradeId === upgrade.id;
-    const buttonText = isBuying ? 'Buying...' : upgrade.maxed ? 'Maxed' : `${upgrade.next_cost} coins`;
-    const disabled = isBuying || upgrade.maxed || !upgrade.affordable;
+    const buttonText = upgrade.maxed ? 'Maxed' : `${upgrade.next_cost} coins`;
+    const disabled = upgrade.maxed || !upgrade.affordable;
     return `<article class="shop-card ${upgrade.maxed ? 'maxed' : ''}">
       <div class="shop-card-head">
         <div>
@@ -725,66 +1095,56 @@ function renderShop() {
       </div>
       <p>${escHtml(upgrade.description)}</p>
       <div class="shop-progress" aria-hidden="true"><span style="width:${pct}%"></span></div>
-      <button class="btn-primary shop-buy-btn" type="button" data-upgrade-id="${escHtml(upgrade.id)}" ${disabled ? 'disabled' : ''}>
+      <button class="btn-primary shop-buy-btn" type="button" onclick="buyUpgrade('${escHtml(upgrade.id)}')" ${disabled ? 'disabled' : ''}>
         ${escHtml(buttonText)}
       </button>
     </article>`;
   }).join('');
-
-  grid.querySelectorAll('.shop-buy-btn').forEach(btn => {
-    btn.addEventListener('click', () => buyUpgrade(btn.dataset.upgradeId));
-  });
 }
 
 async function buyUpgrade(upgradeId) {
-  if (!upgradeId || pendingPurchaseUpgradeId) return;
-  pendingPurchaseUpgradeId = upgradeId;
-  renderShop();
-
   try {
     const res = await apiJson('/api/shop/purchase', {
       method: 'POST',
       body: JSON.stringify({ upgrade_id: upgradeId }),
     });
-    setShopState(res.state);
+    shopState = res.state;
+    renderCoinBadge();
+    renderShop();
     toast(`Upgrade purchased. Level ${res.level}.`, 'success');
   } catch (err) {
     toast(err.message, 'error');
-  } finally {
-    pendingPurchaseUpgradeId = null;
-    renderShop();
   }
 }
 
 function startStudyTicker() {
   clearInterval(studyTickTimer);
   lastStudyTickMs = Date.now();
-  studyTickTimer = setInterval(recordStudyTick, STUDY_TICK_INTERVAL_MS);
+  studyTickTimer = setInterval(recordStudyTick, 60000);
 }
 
 async function recordStudyTick() {
-  if (!authToken || studyTickInFlight) return;
+  if (!authToken) return;
   if (document.hidden) {
     lastStudyTickMs = Date.now();
     return;
   }
 
   const now = Date.now();
-  const elapsed = Math.min(MAX_STUDY_TICK_SECONDS, Math.floor((now - (lastStudyTickMs || now)) / 1000));
-  if (elapsed < MIN_STUDY_TICK_SECONDS) return;
+  const elapsed = Math.min(300, Math.floor((now - (lastStudyTickMs || now)) / 1000));
+  if (elapsed < 30) return;
   lastStudyTickMs = now;
-  studyTickInFlight = true;
 
   try {
     const res = await apiJson('/api/shop/study-tick', {
       method: 'POST',
       body: JSON.stringify({ elapsed_seconds: elapsed }),
     });
-    setShopState(res.state);
+    shopState = res.state;
+    renderCoinBadge();
+    renderShop();
   } catch (err) {
     console.warn('Study coin tick failed:', err.message);
-  } finally {
-    studyTickInFlight = false;
   }
 }
 
@@ -804,7 +1164,7 @@ function coinSuffix(amount) {
   return amount ? ` +${amount} coins` : '';
 }
 
-// Helpers
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function setStatus(el, msg, isError = false) {
   el.innerHTML = msg ? `<span class="spinner"></span>${escHtml(msg)}` : '';
@@ -836,7 +1196,7 @@ async function apiJson(path, options = {}) {
     currentUser = null;
     localStorage.removeItem('auth_token');
     showAuth();
-    throw new Error('Session expired - please sign in again.');
+    throw new Error('Session expired — please sign in again.');
   }
 
   if (!response.ok) {
@@ -880,7 +1240,7 @@ function escHtml(str) {
     .replace(/"/g, '&quot;');
 }
 
-// Init
+// ── Init ──────────────────────────────────────────────────────────────────────
 
 async function bootstrap() {
   if (!authToken) {
@@ -891,6 +1251,7 @@ async function bootstrap() {
     const res = await apiJson('/api/auth/me', { method: 'GET' });
     currentUser = res.user;
     showApp();
+    handleSpotifyReturn();
     updateTabLocks();
     await loadShopState();
     startStudyTicker();

@@ -114,6 +114,41 @@ CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:8000
 If `JWT_SECRET` is not set, the app creates a local `.jwt_secret` file
 automatically.
 
+### Spotify Account Connection
+
+Create an app in the Spotify Developer Dashboard and add this redirect URI:
+
+```text
+http://127.0.0.1:8000/api/spotify/callback
+```
+
+Then add these values to `.env`:
+
+```env
+SPOTIFY_CLIENT_ID=your-spotify-client-id
+SPOTIFY_CLIENT_SECRET=your-spotify-client-secret
+SPOTIFY_REDIRECT_URI=http://127.0.0.1:8000/api/spotify/callback
+SPOTIFY_TOKEN_ENCRYPTION_KEY=your-fernet-key
+```
+
+Generate the token encryption key with:
+
+```powershell
+py -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+```
+
+Restart the server after editing `.env`. Users can then use the `Connect
+Spotify` button in the header. Playback controls require a Spotify Premium
+account and an active Spotify device. Keep `SPOTIFY_TOKEN_ENCRYPTION_KEY`
+stable across restarts and deployments; changing it means existing Spotify
+connections cannot be decrypted and users will need to reconnect. If this env
+var is omitted, the app creates a local `.spotify_token_key` file for dev only.
+
+The Spotify tab can search tracks/playlists, load the user's playlists, and
+send playback to a selected Spotify Connect device. If no device appears, open
+Spotify on desktop or mobile first, then refresh devices. Users who connected
+before playlist scopes were added should disconnect and reconnect Spotify.
+
 ## Run Tests
 
 Install the development dependencies:
@@ -137,6 +172,7 @@ These are generated while running the app and should not be committed:
 
 - `.env` - local API keys
 - `.jwt_secret` - local JWT signing key
+- `.spotify_token_key` - local Spotify token encryption key, when not set in `.env`
 - `app.db` - SQLite database
 - `app.db-*` - SQLite WAL/journal files
 - `uploads/` - uploaded files
