@@ -7,8 +7,143 @@ let flashcards = [];
 let cardIndex = 0;
 let quizQuestions = [];
 let shopState = null;
+let plantState = null;
 let studyTickTimer = null;
 let lastStudyTickMs = null;
+
+// ── Plant SVGs (6 growth stages) ─────────────────────────────────────────────
+const PLANT_SVGS = [
+  // Stage 0: Seed
+  `<svg viewBox="0 0 80 90" xmlns="http://www.w3.org/2000/svg">
+    <ellipse cx="40" cy="82" rx="30" ry="8" fill="#A0784E"/>
+    <ellipse cx="40" cy="82" rx="26" ry="6" fill="#8D6E63"/>
+    <ellipse cx="40" cy="76" rx="6" ry="5" fill="#5D4037"/>
+    <line x1="40" y1="71" x2="40" y2="64" stroke="#66BB6A" stroke-width="2.5" stroke-linecap="round"/>
+  </svg>`,
+  // Stage 1: Sprout
+  `<svg viewBox="0 0 80 90" xmlns="http://www.w3.org/2000/svg">
+    <ellipse cx="40" cy="82" rx="30" ry="8" fill="#A0784E"/>
+    <ellipse cx="40" cy="82" rx="26" ry="6" fill="#8D6E63"/>
+    <line x1="40" y1="80" x2="40" y2="54" stroke="#558B2F" stroke-width="3" stroke-linecap="round"/>
+    <ellipse cx="27" cy="67" rx="13" ry="7" fill="#8BC34A" transform="rotate(-30 27 67)"/>
+    <ellipse cx="53" cy="62" rx="13" ry="7" fill="#7CB342" transform="rotate(30 53 62)"/>
+    <circle cx="40" cy="53" r="5" fill="#558B2F"/>
+  </svg>`,
+  // Stage 2: Seedling
+  `<svg viewBox="0 0 80 90" xmlns="http://www.w3.org/2000/svg">
+    <ellipse cx="40" cy="82" rx="30" ry="8" fill="#A0784E"/>
+    <ellipse cx="40" cy="82" rx="26" ry="6" fill="#8D6E63"/>
+    <line x1="40" y1="80" x2="40" y2="42" stroke="#558B2F" stroke-width="3.5" stroke-linecap="round"/>
+    <ellipse cx="24" cy="66" rx="14" ry="8" fill="#8BC34A" transform="rotate(-35 24 66)"/>
+    <ellipse cx="56" cy="60" rx="14" ry="8" fill="#7CB342" transform="rotate(35 56 60)"/>
+    <ellipse cx="20" cy="53" rx="13" ry="7" fill="#66BB6A" transform="rotate(-45 20 53)"/>
+    <ellipse cx="60" cy="47" rx="13" ry="7" fill="#4CAF50" transform="rotate(45 60 47)"/>
+    <circle cx="40" cy="41" r="5" fill="#388E3C"/>
+  </svg>`,
+  // Stage 3: Young Plant
+  `<svg viewBox="0 0 80 90" xmlns="http://www.w3.org/2000/svg">
+    <ellipse cx="40" cy="82" rx="30" ry="8" fill="#A0784E"/>
+    <ellipse cx="40" cy="82" rx="26" ry="6" fill="#8D6E63"/>
+    <line x1="40" y1="80" x2="40" y2="27" stroke="#558B2F" stroke-width="4" stroke-linecap="round"/>
+    <ellipse cx="24" cy="67" rx="14" ry="8" fill="#8BC34A" transform="rotate(-35 24 67)"/>
+    <ellipse cx="56" cy="61" rx="14" ry="8" fill="#7CB342" transform="rotate(35 56 61)"/>
+    <ellipse cx="19" cy="53" rx="14" ry="8" fill="#66BB6A" transform="rotate(-44 19 53)"/>
+    <ellipse cx="61" cy="47" rx="14" ry="8" fill="#4CAF50" transform="rotate(44 61 47)"/>
+    <ellipse cx="21" cy="39" rx="13" ry="7" fill="#43A047" transform="rotate(-50 21 39)"/>
+    <ellipse cx="59" cy="33" rx="13" ry="7" fill="#388E3C" transform="rotate(50 59 33)"/>
+    <circle cx="40" cy="26" r="6" fill="#2E7D32"/>
+  </svg>`,
+  // Stage 4: Budding
+  `<svg viewBox="0 0 80 90" xmlns="http://www.w3.org/2000/svg">
+    <ellipse cx="40" cy="82" rx="30" ry="8" fill="#A0784E"/>
+    <ellipse cx="40" cy="82" rx="26" ry="6" fill="#8D6E63"/>
+    <line x1="40" y1="80" x2="40" y2="22" stroke="#558B2F" stroke-width="4" stroke-linecap="round"/>
+    <ellipse cx="24" cy="67" rx="13" ry="7" fill="#8BC34A" transform="rotate(-35 24 67)"/>
+    <ellipse cx="56" cy="61" rx="13" ry="7" fill="#7CB342" transform="rotate(35 56 61)"/>
+    <ellipse cx="19" cy="53" rx="13" ry="7" fill="#66BB6A" transform="rotate(-44 19 53)"/>
+    <ellipse cx="61" cy="47" rx="13" ry="7" fill="#4CAF50" transform="rotate(44 61 47)"/>
+    <ellipse cx="22" cy="39" rx="12" ry="7" fill="#43A047" transform="rotate(-50 22 39)"/>
+    <ellipse cx="58" cy="33" rx="12" ry="7" fill="#388E3C" transform="rotate(50 58 33)"/>
+    <ellipse cx="40" cy="13" rx="7" ry="11" fill="#C62828"/>
+    <ellipse cx="40" cy="13" rx="5" ry="8" fill="#E53935"/>
+    <ellipse cx="40" cy="15" rx="3" ry="5" fill="#EF9A9A"/>
+  </svg>`,
+  // Stage 5: Full Bloom
+  `<svg viewBox="0 0 80 90" xmlns="http://www.w3.org/2000/svg">
+    <ellipse cx="40" cy="82" rx="30" ry="8" fill="#A0784E"/>
+    <ellipse cx="40" cy="82" rx="26" ry="6" fill="#8D6E63"/>
+    <line x1="40" y1="80" x2="40" y2="38" stroke="#558B2F" stroke-width="4" stroke-linecap="round"/>
+    <ellipse cx="24" cy="67" rx="13" ry="7" fill="#8BC34A" transform="rotate(-35 24 67)"/>
+    <ellipse cx="56" cy="61" rx="13" ry="7" fill="#7CB342" transform="rotate(35 56 61)"/>
+    <ellipse cx="20" cy="55" rx="13" ry="7" fill="#66BB6A" transform="rotate(-44 20 55)"/>
+    <ellipse cx="60" cy="49" rx="13" ry="7" fill="#4CAF50" transform="rotate(44 60 49)"/>
+    <ellipse cx="40" cy="14" rx="6" ry="9" fill="#E91E63"/>
+    <ellipse cx="40" cy="14" rx="6" ry="9" fill="#F48FB1" transform="rotate(60 40 26)"/>
+    <ellipse cx="40" cy="14" rx="6" ry="9" fill="#E91E63" transform="rotate(120 40 26)"/>
+    <ellipse cx="40" cy="14" rx="6" ry="9" fill="#F48FB1" transform="rotate(180 40 26)"/>
+    <ellipse cx="40" cy="14" rx="6" ry="9" fill="#E91E63" transform="rotate(240 40 26)"/>
+    <ellipse cx="40" cy="14" rx="6" ry="9" fill="#F48FB1" transform="rotate(300 40 26)"/>
+    <circle cx="40" cy="26" r="8" fill="#FDD835"/>
+    <circle cx="40" cy="26" r="5" fill="#F57F17"/>
+    <circle cx="40" cy="26" r="2.5" fill="#E65100"/>
+  </svg>`,
+];
+
+function renderPlant(state, animate) {
+  if (!state) return;
+  const prevStage = plantState ? plantState.stage : -1;
+  const prevHealth = plantState ? plantState.health : 100;
+  plantState = state;
+
+  const artEl = document.getElementById('plant-art');
+  const nameEl = document.getElementById('plant-stage-name');
+  const fillEl = document.getElementById('plant-health-fill');
+  const labelEl = document.getElementById('plant-health-label');
+  const hintEl = document.getElementById('plant-hint');
+  if (!artEl) return;
+
+  artEl.innerHTML = PLANT_SVGS[state.stage] || PLANT_SVGS[0];
+
+  fillEl.style.width = state.health + '%';
+  if (state.health > 60) {
+    fillEl.style.background = 'linear-gradient(90deg,#66BB6A,#43A047)';
+  } else if (state.health > 30) {
+    fillEl.style.background = 'linear-gradient(90deg,#FDD835,#F9A825)';
+  } else {
+    fillEl.style.background = 'linear-gradient(90deg,#EF5350,#C62828)';
+  }
+
+  nameEl.textContent = state.stage_name;
+  labelEl.textContent = state.health + '% health';
+
+  artEl.className = 'plant-art skin-' + (state.skin || 'default');
+  if (state.health <= 0) {
+    artEl.classList.add('plant-dead');
+    hintEl.textContent = 'Withered! -30 coins. Study to revive it.';
+  } else if (state.health < 30) {
+    artEl.classList.add('plant-wilting');
+    hintEl.textContent = 'Your plant is struggling — keep studying to restore it!';
+  } else if (state.health < 60) {
+    artEl.classList.add('plant-stressed');
+    hintEl.textContent = 'Your plant needs care — avoid wrong answers!';
+  } else if (state.stage < 5) {
+    hintEl.textContent = state.stage_progress + '% to next stage — keep studying!';
+  } else {
+    hintEl.textContent = 'Your plant is in full bloom! Keep it healthy.';
+  }
+
+  if (animate === 'wither') {
+    artEl.classList.add('plant-wither-anim');
+    setTimeout(() => artEl.classList.remove('plant-wither-anim'), 800);
+  } else if (prevStage !== -1 && state.stage > prevStage) {
+    artEl.classList.add('plant-grow-anim');
+    setTimeout(() => artEl.classList.remove('plant-grow-anim'), 950);
+    toast('Your plant grew! Now: ' + state.stage_name, 'success');
+  } else if (state.health > prevHealth) {
+    artEl.classList.add('plant-heal-anim');
+    setTimeout(() => artEl.classList.remove('plant-heal-anim'), 650);
+  }
+}
 
 const state = {
   notes: false,
@@ -27,7 +162,8 @@ function showApp() {
   document.getElementById('auth-overlay').style.display = 'none';
   document.getElementById('app-shell').style.display = 'block';
   if (currentUser) {
-    document.getElementById('user-badge').textContent = currentUser.email;
+    const btn = document.getElementById('profile-btn');
+    if (btn) btn.title = currentUser.email;
   }
   if (sessionId) {
     document.getElementById('session-badge').textContent = 'session: ' + sessionId.slice(0, 8);
@@ -258,6 +394,7 @@ function switchTab(name) {
   document.querySelectorAll('.tab-section').forEach(s => {
     s.classList.toggle('active', s.id === 'tab-' + name);
   });
+  if (name === 'profile') loadProfile();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -575,8 +712,13 @@ async function submitQuiz() {
 
     renderQuizResults(res);
     markCompleted('quiz');
-    if (res.coins_awarded) await loadShopState();
-    toast(`Scored ${res.score} / ${res.total}${coinSuffix(res.coins_awarded)}`, 'success');
+    if (res.coins_awarded || res.death_penalty) await loadShopState();
+    if (res.plant) renderPlant(res.plant, res.wrong_count > 0 ? 'wither' : null);
+    if (res.death_penalty) {
+      setTimeout(() => toast(`Your plant died! Lost ${res.death_penalty} coins.`, 'error'), 400);
+    } else {
+      toast(`Scored ${res.score} / ${res.total}${coinSuffix(res.coins_awarded)}`, 'success');
+    }
   } catch (err) {
     toast('Error submitting quiz: ' + err.message, 'error');
   } finally {
@@ -665,6 +807,7 @@ async function loadShopState() {
     shopState = await apiJson('/api/shop/state', { method: 'GET' });
     renderCoinBadge();
     renderShop();
+    if (shopState.plant) renderPlant(shopState.plant);
   } catch (err) {
     console.warn('Could not load shop state:', err.message);
   }
@@ -727,6 +870,244 @@ async function buyUpgrade(upgradeId) {
   }
 }
 
+// ── Settings ─────────────────────────────────────────────────────────────────
+
+const SETTINGS_DEFAULTS = {
+  darkMode: false,
+  compactMode: false,
+  toasts: true,
+  sound: false,
+  defaultFlashcards: 10,
+  defaultQuiz: 5,
+  defaultPlanDays: 7,
+  defaultPlanHours: 2,
+};
+
+let settings = loadSettingsFromStorage();
+
+function loadSettingsFromStorage() {
+  try {
+    const raw = localStorage.getItem('app_settings');
+    return raw ? { ...SETTINGS_DEFAULTS, ...JSON.parse(raw) } : { ...SETTINGS_DEFAULTS };
+  } catch {
+    return { ...SETTINGS_DEFAULTS };
+  }
+}
+
+function saveSettings() {
+  localStorage.setItem('app_settings', JSON.stringify(settings));
+}
+
+function applySettings() {
+  document.body.classList.toggle('dark-mode', !!settings.darkMode);
+  document.body.classList.toggle('compact-mode', !!settings.compactMode);
+  const fc = document.getElementById('flashcards-count');
+  const qc = document.getElementById('quiz-count');
+  const pd = document.getElementById('days-input');
+  const ph = document.getElementById('hours-input');
+  if (fc) fc.value = settings.defaultFlashcards;
+  if (qc) qc.value = settings.defaultQuiz;
+  if (pd) pd.value = settings.defaultPlanDays;
+  if (ph) ph.value = settings.defaultPlanHours;
+}
+
+function updateSetting(key, value) {
+  settings[key] = value;
+  saveSettings();
+  if (key === 'darkMode' || key === 'compactMode') {
+    document.body.classList.add('theme-switching');
+    applySettings();
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        document.body.classList.remove('theme-switching');
+      });
+    });
+  } else {
+    applySettings();
+  }
+}
+
+function openSettings() {
+  const overlay = document.getElementById('settings-overlay');
+  if (!overlay) return;
+  document.getElementById('setting-dark-mode').checked = !!settings.darkMode;
+  document.getElementById('setting-compact').checked = !!settings.compactMode;
+  document.getElementById('setting-toasts').checked = !!settings.toasts;
+  document.getElementById('setting-sound').checked = !!settings.sound;
+  document.getElementById('setting-flashcards').value = settings.defaultFlashcards;
+  document.getElementById('setting-quiz').value = settings.defaultQuiz;
+  document.getElementById('setting-plan-days').value = settings.defaultPlanDays;
+  document.getElementById('setting-plan-hours').value = settings.defaultPlanHours;
+  document.getElementById('settings-email').textContent = currentUser?.email || '—';
+  overlay.style.display = 'flex';
+}
+
+function closeSettings() {
+  const overlay = document.getElementById('settings-overlay');
+  if (overlay) overlay.style.display = 'none';
+}
+
+function handleSettingsBackdrop(e) {
+  if (e.target.id === 'settings-overlay') closeSettings();
+}
+
+function resetSettings() {
+  if (!confirm('Reset all settings to defaults?')) return;
+  settings = { ...SETTINGS_DEFAULTS };
+  saveSettings();
+  applySettings();
+  openSettings();
+  toast('Settings reset to defaults.', 'success');
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    const ov = document.getElementById('settings-overlay');
+    if (ov && ov.style.display === 'flex') closeSettings();
+  }
+});
+
+// ── Profile ──────────────────────────────────────────────────────────────────
+
+let profileData = null;
+let selectedLevelId = null;
+
+async function loadProfile() {
+  if (!authToken) return;
+  try {
+    profileData = await apiJson('/api/profile/', { method: 'GET' });
+    renderProfile();
+  } catch (err) {
+    toast('Could not load profile: ' + err.message, 'error');
+  }
+}
+
+function renderProfile() {
+  if (!profileData) return;
+  const { stats, quiz_history, plant, levels } = profileData;
+
+  document.getElementById('profile-study-time').textContent = formatStudyTime(stats.study_seconds || 0);
+  document.getElementById('profile-coins').textContent = stats.coins;
+  document.getElementById('profile-quizzes').textContent = stats.total_quizzes;
+  document.getElementById('profile-avg-score').textContent = stats.avg_percentage + '%';
+
+  // Quiz history
+  const historyEl = document.getElementById('profile-history');
+  if (!quiz_history.length) {
+    historyEl.innerHTML = '<div class="profile-history-empty">No quizzes taken yet.</div>';
+  } else {
+    historyEl.innerHTML = quiz_history.map(q => {
+      const pct = q.percentage ?? 0;
+      const cls = pct >= 80 ? '' : pct >= 50 ? 'mid' : 'low';
+      return `<div class="profile-history-item">
+        <span class="topic">${escHtml(q.topic)}</span>
+        <span class="score">${q.score}/${q.total}</span>
+        <span class="pct ${cls}">${pct}%</span>
+      </div>`;
+    }).join('');
+  }
+
+  // Plant visual
+  const artEl = document.getElementById('profile-plant-art');
+  artEl.innerHTML = PLANT_SVGS[plant.stage] || PLANT_SVGS[0];
+  artEl.className = 'profile-plant-art skin-' + (plant.skin || 'default');
+  document.getElementById('profile-plant-stage').textContent = plant.stage_name;
+  document.getElementById('profile-plant-xp').textContent = plant.xp + ' XP';
+  const fill = document.getElementById('profile-plant-health-fill');
+  fill.style.width = plant.health + '%';
+  if (plant.health > 60) fill.style.background = 'linear-gradient(90deg,#66BB6A,#43A047)';
+  else if (plant.health > 30) fill.style.background = 'linear-gradient(90deg,#FDD835,#F9A825)';
+  else fill.style.background = 'linear-gradient(90deg,#EF5350,#C62828)';
+
+  // Vertical level tabs
+  const tabsEl = document.getElementById('profile-level-tabs');
+  tabsEl.innerHTML = levels.map(lvl => {
+    const classes = ['level-tab'];
+    if (!lvl.reached) classes.push('locked');
+    if (lvl.claimed) classes.push('claimed');
+    if (lvl.equipped) classes.push('equipped');
+    if (selectedLevelId === lvl.id) classes.push('active');
+    let tag = '';
+    if (lvl.equipped) tag = 'Equipped';
+    else if (lvl.claimed) tag = 'Owned';
+    else if (lvl.reached) tag = `+${lvl.coin_reward}`;
+    else tag = `${lvl.min_xp}xp`;
+    return `<button type="button" class="${classes.join(' ')}" onclick="selectLevel('${lvl.id}')">
+      <span>${escHtml(lvl.name)}</span>
+      <span class="level-tab-tag">${escHtml(tag)}</span>
+    </button>`;
+  }).join('');
+
+  // Keep description in sync with current selection
+  if (selectedLevelId) {
+    const stillExists = levels.find(l => l.id === selectedLevelId);
+    if (stillExists) renderLevelDescription(stillExists);
+    else selectedLevelId = null;
+  }
+}
+
+function selectLevel(levelId) {
+  if (!profileData) return;
+  selectedLevelId = levelId;
+  const lvl = profileData.levels.find(l => l.id === levelId);
+  if (!lvl) return;
+  // Mark active on tabs
+  document.querySelectorAll('#profile-level-tabs .level-tab').forEach(el => el.classList.remove('active'));
+  const idx = profileData.levels.findIndex(l => l.id === levelId);
+  const el = document.querySelectorAll('#profile-level-tabs .level-tab')[idx];
+  if (el) el.classList.add('active');
+  renderLevelDescription(lvl);
+}
+
+function renderLevelDescription(lvl) {
+  const desc = document.getElementById('profile-plant-desc');
+  const action = lvl.reached
+    ? (lvl.claimed
+        ? (lvl.equipped
+            ? `<button class="profile-plant-claim-btn" disabled>Skin equipped</button>`
+            : `<button class="profile-plant-claim-btn" onclick="claimLevel('${lvl.id}')">Equip skin</button>`)
+        : `<button class="profile-plant-claim-btn" onclick="claimLevel('${lvl.id}')">Claim +${lvl.coin_reward} coins &amp; skin</button>`)
+    : `<button class="profile-plant-claim-btn" disabled>Locked — reach ${lvl.min_xp} XP</button>`;
+
+  desc.innerHTML = `
+    <div class="profile-plant-desc-title">${escHtml(lvl.name)}</div>
+    <p class="profile-plant-desc-body">${escHtml(lvl.description)}</p>
+    <div class="profile-plant-desc-meta">
+      <span>Requires ${lvl.min_xp} XP</span>
+      <span>Skin: ${escHtml(lvl.skin)}</span>
+      <span>Reward: +${lvl.coin_reward} coins</span>
+    </div>
+    ${action}
+  `;
+}
+
+async function claimLevel(levelId) {
+  try {
+    const res = await apiJson('/api/profile/claim', {
+      method: 'POST',
+      body: JSON.stringify({ level_id: levelId }),
+    });
+    profileData.plant = res.plant;
+    profileData.levels = res.levels;
+    if (res.shop) {
+      shopState = res.shop;
+      profileData.stats.coins = shopState.coins;
+      profileData.stats.earned_coins = shopState.earned_coins;
+      renderCoinBadge();
+      renderShop();
+    }
+    renderPlant(res.plant);
+    renderProfile();
+    if (res.coins_awarded) {
+      toast(`Claimed ${res.coins_awarded} coins & equipped ${res.skin} skin!`, 'success');
+    } else {
+      toast(`Equipped ${res.skin} skin.`, 'success');
+    }
+  } catch (err) {
+    toast(err.message, 'error');
+  }
+}
+
 function startStudyTicker() {
   clearInterval(studyTickTimer);
   lastStudyTickMs = Date.now();
@@ -753,6 +1134,7 @@ async function recordStudyTick() {
     shopState = res.state;
     renderCoinBadge();
     renderShop();
+    if (res.plant) renderPlant(res.plant);
   } catch (err) {
     console.warn('Study coin tick failed:', err.message);
   }
@@ -834,6 +1216,7 @@ function formatValidationError(err) {
 
 let toastTimer;
 function toast(msg, kind = '') {
+  if (settings && settings.toasts === false) return;
   const el = document.getElementById('toast');
   if (!el) return;
   el.textContent = msg;
@@ -853,6 +1236,7 @@ function escHtml(str) {
 // ── Init ──────────────────────────────────────────────────────────────────────
 
 async function bootstrap() {
+  applySettings();
   if (!authToken) {
     showAuth();
     return;

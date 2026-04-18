@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException
 
 from models.schemas import QuizSubmitRequest
-from services import auth, session_store, shop
+from services import auth, session_store, shop, plant as plant_svc
 
 router = APIRouter()
 
@@ -58,6 +58,11 @@ async def submit_quiz(req: QuizSubmitRequest, user: dict = auth.CurrentUser):
     existing_history.append(history_entry)
     session_store.update_session(req.session_id, user["id"], {"quiz_history": existing_history})
     coins_awarded = shop.award_quiz_bonus(user["id"])
+    plant_state = plant_svc.apply_wrong_answers(user["id"], len(wrong_ids))
+
+    death_penalty = 0
+    if plant_state.get("just_died"):
+        death_penalty = shop.deduct_coins(user["id"], 30)
 
     return {
         "session_id": req.session_id,
@@ -67,4 +72,7 @@ async def submit_quiz(req: QuizSubmitRequest, user: dict = auth.CurrentUser):
         "weak_topics": weak_topics,
         "results": results,
         "coins_awarded": coins_awarded,
+        "wrong_count": len(wrong_ids),
+        "plant": plant_state,
+        "death_penalty": death_penalty,
     }
