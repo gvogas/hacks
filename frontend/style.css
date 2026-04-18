@@ -907,6 +907,52 @@ input::placeholder { color: #94a3b8; }
   border-top-color: var(--border);
 }
 
+.section-content {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.section-text {
+  line-height: 1.7;
+}
+
+.section-image {
+  text-align: center;
+}
+
+.section-image img {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.2s var(--ease);
+}
+
+.section-image img:hover {
+  transform: scale(1.02);
+}
+
+.image-caption {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-top: 0.5rem;
+  font-style: italic;
+}
+
+@media (max-width: 768px) {
+  .section-content {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .section-image img {
+    height: 150px;
+  }
+}
+
 .accordion-item { transition: box-shadow 0.25s var(--ease), transform 0.25s var(--ease); }
 .accordion-item:has(.accordion-body.open) { box-shadow: var(--shadow); }
 
