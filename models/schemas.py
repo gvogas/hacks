@@ -1,4 +1,4 @@
-from typing import Annotated, Optional
+from typing import Annotated, Literal, Optional
 
 from pydantic import BaseModel, EmailStr, Field, StringConstraints
 
@@ -18,8 +18,9 @@ class LoginRequest(BaseModel):
 
 
 class StudyStartRequest(BaseModel):
-    topic: TopicText
+    topic: Optional[TopicText] = None
     session_id: Optional[SessionId] = None
+    source: Literal['both', 'web', 'files'] = 'both'
 
 
 class GenerateLearningRequest(BaseModel):

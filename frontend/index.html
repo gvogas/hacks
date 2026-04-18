@@ -122,6 +122,16 @@
       </div>
 
       <div class="field">
+        <label>Search source</label>
+        <div class="source-options">
+          <label><input type="radio" name="study-source" value="both" checked onchange="updateStudySource()" /> Web + uploaded files</label>
+          <label><input type="radio" name="study-source" value="web" onchange="updateStudySource()" /> Web only</label>
+          <label><input type="radio" name="study-source" value="files" onchange="updateStudySource()" /> Files only</label>
+        </div>
+        <small class="field-hint">Choose which reference material to use for generating notes.</small>
+      </div>
+
+      <div class="field">
         <label>Upload Files <span class="optional">(optional)</span></label>
         <div class="upload-area" id="upload-area">
           <input type="file" id="file-input" accept=".pdf,.pptx,.txt,.md" multiple hidden />
