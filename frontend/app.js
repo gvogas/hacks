@@ -128,6 +128,7 @@ function showAuth() {
 function showApp() {
   document.getElementById('auth-overlay').style.display = 'none';
   document.getElementById('app-shell').style.display = 'block';
+  updateTabLocks();
   if (currentUser) {
     const btn = document.getElementById('profile-btn');
     if (btn) btn.title = currentUser.email;
@@ -1156,6 +1157,12 @@ function renderQuiz() {
 
   container.innerHTML = html;
   document.getElementById('submit-quiz-btn').style.display = 'inline-block';
+  document.getElementById('reset-quiz-btn').style.display = 'inline-block';
+}
+
+function resetQuiz() {
+  document.getElementById('quiz-results').innerHTML = '';
+  renderQuiz();
 }
 
 async function submitQuiz() {
