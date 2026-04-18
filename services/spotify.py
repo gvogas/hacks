@@ -34,6 +34,7 @@ DEFAULT_SCOPES = (
     "user-modify-playback-state",
     "playlist-read-private",
     "playlist-read-collaborative",
+    "streaming",
 )
 TOKEN_REFRESH_SKEW_SECONDS = 60
 REQUEST_TIMEOUT_SECONDS = 12
@@ -144,8 +145,27 @@ def get_user_playlists(user_id: int, limit: int = 20) -> dict:
 
 def get_current_playback(user_id: int) -> dict:
     access_token = valid_access_token(user_id)
-    playback = _spotify_request("GET", "/me/player/currently-playing", access_token)
-    return playback or {"is_playing": False, "item": None}
+    playback = _spotify_request("GET", "/me/player", access_token) or {}
+    item = playback.get("item")
+    device = playback.get("device") or {}
+    context = playback.get("context") or {}
+    duration_ms = item.get("duration_ms", 0) if item else 0
+    return {
+        "is_playing": bool(playback.get("is_playing")),
+        "progress_ms": playback.get("progress_ms") or 0,
+        "duration_ms": duration_ms,
+        "item": _serialize_playback_item(item) if item else None,
+        "device": {
+            "id": device.get("id"),
+            "name": device.get("name"),
+            "type": device.get("type"),
+        } if device else None,
+        "context": {
+            "type": context.get("type"),
+            "uri": context.get("uri"),
+            "external_url": (context.get("external_urls") or {}).get("spotify"),
+        } if context else None,
+    }
 
 
 def transfer_playback(user_id: int, device_id: str, play: bool = False) -> dict:
@@ -311,6 +331,23 @@ def _serialize_track(track: dict) -> dict:
     }
 
 
+def _serialize_playback_item(item: dict) -> dict:
+    if item.get("type") == "track":
+        return {"type": "track", **_serialize_track(item)}
+
+    show = item.get("show") or {}
+    return {
+        "type": item.get("type") or "item",
+        "id": item.get("id"),
+        "name": item.get("name") or "Untitled",
+        "uri": item.get("uri"),
+        "artist": show.get("publisher") or "",
+        "album": show.get("name") or "",
+        "image_url": _first_image_url(show.get("images") or item.get("images") or []),
+        "external_url": (item.get("external_urls") or {}).get("spotify"),
+    }
+
+
 def _serialize_playlist(playlist: dict) -> dict:
     owner = playlist.get("owner") or {}
     tracks = playlist.get("tracks") or playlist.get("items") or {}
@@ -443,12 +480,12 @@ def _spotify_request(method: str, path: str, access_token: str, **kwargs):
         return None
     if not response.ok:
         _raise_spotify_error(response, "Spotify API request failed")
-    if not response.content:
+    if not response.content or not response.content.strip():
         return None
     try:
         return response.json()
-    except ValueError as exc:
-        raise ExternalServiceError("spotify", "Spotify returned an invalid API response") from exc
+    except ValueError:
+        return None
 
 
 def _raise_spotify_error(response: requests.Response, fallback: str) -> None:

@@ -296,6 +296,110 @@ def test_spotify_transfer_targets_device(client, user, monkeypatch):
     assert r.json() == {"ok": True}
 
 
+def test_spotify_current_returns_now_playing_summary(client, user, monkeypatch):
+    monkeypatch.setenv("SPOTIFY_CLIENT_ID", "spotify-client-id")
+    monkeypatch.setenv("SPOTIFY_CLIENT_SECRET", "spotify-client-secret")
+    monkeypatch.setenv("SPOTIFY_TOKEN_ENCRYPTION_KEY", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=")
+
+    from services import db
+    from services import spotify as spotify_service
+    from services.auth import now_utc
+
+    def fake_spotify_request(method, path, access_token, **kwargs):
+        assert method == "GET"
+        assert path == "/me/player"
+        assert access_token == "access-token"
+        assert kwargs == {}
+        return {
+            "is_playing": True,
+            "progress_ms": 45000,
+            "device": {"id": "device-1", "name": "Laptop", "type": "Computer"},
+            "context": {"type": "playlist", "uri": "spotify:playlist:playlist-1"},
+            "item": {
+                "type": "track",
+                "id": "track-1",
+                "name": "Focus Song",
+                "uri": "spotify:track:track-1",
+                "duration_ms": 180000,
+                "artists": [{"name": "Artist"}],
+                "album": {"name": "Album", "images": [{"url": "https://image.example/track.jpg"}]},
+                "external_urls": {"spotify": "https://open.spotify.com/track/track-1"},
+            },
+        }
+
+    monkeypatch.setattr(spotify_service, "_spotify_request", fake_spotify_request)
+
+    now = now_utc()
+    db.execute(
+        "INSERT INTO spotify_connections "
+        "(user_id, spotify_user_id, display_name, scope, token_type, access_token, refresh_token, "
+        "expires_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (
+            user["user"]["id"],
+            "spotify-user-1",
+            "Study DJ",
+            "",
+            "Bearer",
+            spotify_service._encrypt_token("access-token"),
+            spotify_service._encrypt_token("refresh-token"),
+            (now + timedelta(hours=1)).isoformat(),
+            now.isoformat(),
+            now.isoformat(),
+        ),
+    )
+
+    r = client.get("/api/spotify/current", headers=user["headers"])
+
+    assert r.status_code == 200
+    body = r.json()
+    assert body["is_playing"] is True
+    assert body["progress_ms"] == 45000
+    assert body["duration_ms"] == 180000
+    assert body["device"]["name"] == "Laptop"
+    assert body["item"]["name"] == "Focus Song"
+    assert body["item"]["artist"] == "Artist"
+
+
+def test_spotify_current_handles_no_playback(client, user, monkeypatch):
+    monkeypatch.setenv("SPOTIFY_CLIENT_ID", "spotify-client-id")
+    monkeypatch.setenv("SPOTIFY_CLIENT_SECRET", "spotify-client-secret")
+    monkeypatch.setenv("SPOTIFY_TOKEN_ENCRYPTION_KEY", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=")
+
+    from services import db
+    from services import spotify as spotify_service
+    from services.auth import now_utc
+
+    def fake_spotify_request(_method, _path, _access_token, **_kwargs):
+        return None
+
+    monkeypatch.setattr(spotify_service, "_spotify_request", fake_spotify_request)
+
+    now = now_utc()
+    db.execute(
+        "INSERT INTO spotify_connections "
+        "(user_id, spotify_user_id, display_name, scope, token_type, access_token, refresh_token, "
+        "expires_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (
+            user["user"]["id"],
+            "spotify-user-1",
+            "Study DJ",
+            "",
+            "Bearer",
+            spotify_service._encrypt_token("access-token"),
+            spotify_service._encrypt_token("refresh-token"),
+            (now + timedelta(hours=1)).isoformat(),
+            now.isoformat(),
+            now.isoformat(),
+        ),
+    )
+
+    r = client.get("/api/spotify/current", headers=user["headers"])
+
+    assert r.status_code == 200
+    assert r.json()["is_playing"] is False
+    assert r.json()["item"] is None
+
+
 def test_spotify_disconnect_removes_connection(client, user, monkeypatch):
     monkeypatch.setenv("SPOTIFY_CLIENT_ID", "spotify-client-id")
     monkeypatch.setenv("SPOTIFY_CLIENT_SECRET", "spotify-client-secret")

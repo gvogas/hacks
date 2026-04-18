@@ -250,6 +250,19 @@
     <div class="spotify-panel">
       <div class="spotify-panel-head">
         <div>
+          <span class="spotify-kicker">Now Playing</span>
+          <strong id="spotify-now-title">Nothing playing</strong>
+        </div>
+        <button class="btn-secondary" type="button" onclick="loadSpotifyCurrent()">Refresh</button>
+      </div>
+      <div id="spotify-now-playing" class="spotify-now-playing">
+        <div class="spotify-empty">Connect Spotify and start playback to see the current song.</div>
+      </div>
+    </div>
+
+    <div class="spotify-panel">
+      <div class="spotify-panel-head">
+        <div>
           <span class="spotify-kicker">Device</span>
           <strong id="spotify-device-summary">No device selected</strong>
         </div>
@@ -276,6 +289,7 @@
 
   </div> <!-- /app-shell -->
 
+  <script src="https://sdk.scdn.co/spotify-player.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

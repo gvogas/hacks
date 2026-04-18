@@ -9,13 +9,18 @@ let quizQuestions = [];
 let shopState = null;
 let studyTickTimer = null;
 let lastStudyTickMs = null;
-let bgMusic = null;
-let isMusicPlaying = false;
-let musicSetupDone = false;
 let spotifyState = null;
 let spotifySetupDone = false;
 let spotifyDevices = [];
 let selectedSpotifyDeviceId = localStorage.getItem('spotify_device_id') || '';
+let spotifyWebPlayer = null;
+let spotifyWebDeviceId = null;
+let spotifySdkReady = false;
+
+window.onSpotifyWebPlaybackSDKReady = () => {
+  spotifySdkReady = true;
+  if (authToken && spotifyState?.connected) initSpotifyWebPlayer();
+};
 
 const state = {
   notes: false,
@@ -40,10 +45,6 @@ function showApp() {
     document.getElementById('session-badge').textContent = 'session: ' + sessionId.slice(0, 8);
   }
   renderCoinBadge();
-  if (!musicSetupDone) {
-    setupMusic();
-    musicSetupDone = true;
-  }
   if (!spotifySetupDone) {
     setupSpotifyControls();
     spotifySetupDone = true;
@@ -119,79 +120,6 @@ document.getElementById('auth-email')?.addEventListener('keydown', e => {
   if (e.key === 'Enter') { e.preventDefault(); document.getElementById('auth-password').focus(); }
 });
 
-// ── Music ────────────────────────────────────────────────────────────────────
-
-function setupMusic() {
-  // Create audio element
-  // NOTE: Add an audio file to `frontend/audio/background-music.mp3`
-  bgMusic = new Audio('/audio/new-track.mp3'); // <-- Point this to your new audio file
-  bgMusic.loop = true;
-  bgMusic.volume = 0.2;
-
-  // Create toggle button
-  const musicBtn = document.createElement('button');
-  musicBtn.id = 'music-toggle-btn';
-  musicBtn.className = 'header-btn';
-  musicBtn.title = 'Toggle background music';
-  musicBtn.innerHTML = '<span>🎵</span> Music Off';
-  musicBtn.addEventListener('click', toggleMusic);
-
-  // Add to header
-  const headerRight = document.querySelector('.header-right');
-  if (headerRight) {
-    const logoutBtn = headerRight.querySelector('button[onclick="logout()"]');
-    if (logoutBtn) {
-      headerRight.insertBefore(musicBtn, logoutBtn);
-    } else {
-      headerRight.appendChild(musicBtn);
-    }
-  }
-
-  // Load preference
-  if (localStorage.getItem('music_enabled') === 'true') {
-    playMusic();
-  }
-}
-
-function playMusic() {
-  if (!bgMusic) return;
-  const playPromise = bgMusic.play();
-
-  if (playPromise !== undefined) {
-    playPromise.then(_ => {
-      isMusicPlaying = true;
-      const btn = document.getElementById('music-toggle-btn');
-      btn.innerHTML = '<span>🎵</span> Music On';
-      btn.classList.add('playing');
-      localStorage.setItem('music_enabled', 'true');
-    }).catch(error => {
-      console.warn("Music autoplay was blocked by the browser.");
-      // If autoplay fails, ensure state is correct
-      pauseMusic();
-    });
-  }
-}
-
-function pauseMusic() {
-  if (!bgMusic) return;
-  bgMusic.pause();
-  isMusicPlaying = false;
-  const btn = document.getElementById('music-toggle-btn');
-  if (btn) {
-    btn.innerHTML = '<span>🎵</span> Music Off';
-    btn.classList.remove('playing');
-  }
-  localStorage.setItem('music_enabled', 'false');
-}
-
-function toggleMusic() {
-  if (isMusicPlaying) {
-    pauseMusic();
-  } else {
-    playMusic();
-  }
-}
-
 function setupSpotifyControls() {
   const headerRight = document.querySelector('.header-right');
   if (!headerRight || document.getElementById('spotify-controls')) return;
@@ -237,9 +165,61 @@ async function loadSpotifyStatus() {
   try {
     spotifyState = await apiJson('/api/spotify/status', { method: 'GET' });
     renderSpotifyControls();
+    if (spotifyState.connected) {
+      loadSpotifyCurrent();
+      if (spotifySdkReady && !spotifyWebPlayer) initSpotifyWebPlayer();
+    }
   } catch (err) {
     console.warn('Could not load Spotify status:', err.message);
   }
+}
+
+function initSpotifyWebPlayer() {
+  if (spotifyWebPlayer || !window.Spotify) return;
+
+  spotifyWebPlayer = new window.Spotify.Player({
+    name: 'Study Assistant (Browser)',
+    getOAuthToken: async (cb) => {
+      try {
+        const res = await apiJson('/api/spotify/token', { method: 'GET' });
+        cb(res.access_token);
+      } catch (err) {
+        console.warn('Could not fetch Spotify token:', err.message);
+      }
+    },
+    volume: 0.5,
+  });
+
+  spotifyWebPlayer.addListener('ready', async ({ device_id }) => {
+    spotifyWebDeviceId = device_id;
+    selectedSpotifyDeviceId = device_id;
+    localStorage.setItem('spotify_device_id', device_id);
+    try {
+      await apiJson('/api/spotify/transfer', {
+        method: 'PUT',
+        body: JSON.stringify({ device_id, play: false }),
+      });
+      toast('Spotify ready in browser.', 'success');
+    } catch (err) {
+      console.warn('Spotify transfer to browser failed:', err.message);
+    }
+    loadSpotifyDevices();
+    loadSpotifyCurrent();
+  });
+
+  spotifyWebPlayer.addListener('not_ready', ({ device_id }) => {
+    if (spotifyWebDeviceId === device_id) spotifyWebDeviceId = null;
+  });
+
+  spotifyWebPlayer.addListener('player_state_changed', () => loadSpotifyCurrent());
+  spotifyWebPlayer.addListener('initialization_error', ({ message }) => console.warn('Spotify init error:', message));
+  spotifyWebPlayer.addListener('authentication_error', ({ message }) => console.warn('Spotify auth error:', message));
+  spotifyWebPlayer.addListener('account_error', ({ message }) => {
+    toast('Spotify Premium is required to play in the browser.', 'error');
+    console.warn('Spotify account error:', message);
+  });
+
+  spotifyWebPlayer.connect();
 }
 
 function renderSpotifyControls() {
@@ -256,6 +236,7 @@ function renderSpotifyControls() {
   connectBtn.title = connected ? 'Disconnect Spotify' : 'Connect Spotify';
   playbackBtns.forEach(btn => { btn.style.display = connected ? 'inline-flex' : 'none'; });
   renderSpotifyDevices();
+  if (!connected) loadSpotifyCurrent();
 }
 
 async function handleSpotifyConnectButton() {
@@ -308,6 +289,7 @@ async function spotifyCommand(action) {
       options.body = JSON.stringify({ device_id: selectedSpotifyDeviceId });
     }
     await apiJson(endpoint.path, options);
+    loadSpotifyCurrent();
     toast(endpoint.label, 'success');
   } catch (err) {
     toast('Spotify command failed: ' + err.message, 'error');
@@ -342,7 +324,7 @@ async function loadSpotifyDevices() {
   setStatus(status, 'Loading devices...');
   try {
     const res = await apiJson('/api/spotify/devices', { method: 'GET' });
-    spotifyDevices = res.devices || [];
+    spotifyDevices = (res.devices || []).filter(device => (device.type || '').toLowerCase() !== 'avr');
     const selectedExists = spotifyDevices.some(device => device.id === selectedSpotifyDeviceId);
     const activeDevice = spotifyDevices.find(device => device.is_active && device.id);
     if (!selectedExists) {
@@ -401,6 +383,7 @@ async function selectSpotifyDevice(deviceId) {
       body: JSON.stringify({ device_id: deviceId, play: false }),
     });
     toast('Spotify device selected.', 'success');
+    loadSpotifyCurrent();
   } catch (err) {
     toast('Device selected, but transfer failed: ' + err.message, 'error');
   }
@@ -496,6 +479,7 @@ async function playSpotifyItem(kind, uri) {
     });
     setStatus(status, '');
     toast('Spotify playback started.', 'success');
+    loadSpotifyCurrent();
   } catch (err) {
     setStatus(status, 'Spotify play failed: ' + err.message, true);
   }
@@ -504,6 +488,65 @@ async function playSpotifyItem(kind, uri) {
 document.getElementById('spotify-search-input')?.addEventListener('keydown', e => {
   if (e.key === 'Enter') { e.preventDefault(); searchSpotify(); }
 });
+
+async function loadSpotifyCurrent() {
+  const title = document.getElementById('spotify-now-title');
+  const container = document.getElementById('spotify-now-playing');
+  if (!title || !container || !authToken) return;
+  if (!spotifyState?.connected) {
+    title.textContent = 'Spotify not connected';
+    container.innerHTML = '<div class="spotify-empty">Connect Spotify to see what is playing.</div>';
+    return;
+  }
+
+  try {
+    const current = await apiJson('/api/spotify/current', { method: 'GET' });
+    renderSpotifyCurrent(current);
+  } catch (err) {
+    title.textContent = 'Could not load playback';
+    container.innerHTML = `<div class="spotify-empty">${escHtml(err.message)}</div>`;
+  }
+}
+
+function renderSpotifyCurrent(current) {
+  const title = document.getElementById('spotify-now-title');
+  const container = document.getElementById('spotify-now-playing');
+  if (!title || !container) return;
+
+  if (!current?.item) {
+    title.textContent = current?.is_playing ? 'Playing' : 'Nothing playing';
+    container.innerHTML = '<div class="spotify-empty">Start a song or playlist from Spotify, then refresh.</div>';
+    return;
+  }
+
+  const item = current.item;
+  const device = current.device?.name ? ` on ${current.device.name}` : '';
+  const state = current.is_playing ? 'Playing' : 'Paused';
+  const subtitle = [item.artist, item.album].filter(Boolean).join(' - ');
+  const progress = current.duration_ms ? Math.min(100, Math.round((current.progress_ms / current.duration_ms) * 100)) : 0;
+  const art = item.image_url
+    ? `<img src="${escHtml(item.image_url)}" alt="" loading="lazy" />`
+    : '<div class="spotify-art-placeholder"></div>';
+
+  title.textContent = `${state}${device}`;
+  container.innerHTML = `<article class="spotify-current">
+    <div class="spotify-art spotify-current-art">${art}</div>
+    <div class="spotify-current-info">
+      <strong>${escHtml(item.name)}</strong>
+      <span>${escHtml(subtitle || item.type || 'Spotify')}</span>
+      <div class="spotify-progress" aria-hidden="true"><span style="width:${progress}%"></span></div>
+      <small>${formatDuration(current.progress_ms)} / ${formatDuration(current.duration_ms)}</small>
+    </div>
+    ${item.external_url ? `<a class="btn-secondary spotify-open-link" href="${escHtml(item.external_url)}" target="_blank" rel="noreferrer">Open</a>` : ''}
+  </article>`;
+}
+
+function formatDuration(ms) {
+  const totalSeconds = Math.max(0, Math.floor((ms || 0) / 1000));
+  const mins = Math.floor(totalSeconds / 60);
+  const secs = totalSeconds % 60;
+  return `${mins}:${String(secs).padStart(2, '0')}`;
+}
 
 // ── History sidebar ──────────────────────────────────────────────────────────
 

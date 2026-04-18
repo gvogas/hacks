@@ -63,6 +63,12 @@ async def disconnect(user: dict = auth.CurrentUser):
     return spotify.disconnect(user["id"])
 
 
+@router.get("/token")
+async def web_playback_token(user: dict = auth.CurrentUser):
+    access_token = spotify.valid_access_token(user["id"])
+    return {"access_token": access_token}
+
+
 @router.get("/devices")
 async def devices(user: dict = auth.CurrentUser):
     return spotify.get_available_devices(user["id"])
