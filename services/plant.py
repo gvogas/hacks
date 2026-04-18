@@ -142,8 +142,8 @@ def apply_study_tick(user_id: int, seconds: int) -> None:
     now = now_utc().isoformat()
     db.execute(
         "UPDATE user_progress SET "
-        "plant_xp = plant_xp + ?, "
-        "plant_health = MIN(100, plant_health + ?), "
+        "plant_xp = COALESCE(plant_xp, 0) + ?, "
+        "plant_health = MIN(100, COALESCE(plant_health, 100) + ?), "
         "updated_at = ? WHERE user_id = ?",
         (xp_gain, health_gain, now, user_id),
     )
@@ -152,14 +152,10 @@ def apply_study_tick(user_id: int, seconds: int) -> None:
 def apply_heal(user_id: int, amount: int) -> dict:
     if amount <= 0:
         return get_plant_state(user_id)
-    state = get_plant_state(user_id)
-    # Withered plants must be revived by study, not healed by answers
-    if state["health"] <= 0:
-        return state
     now = now_utc().isoformat()
     db.execute(
         "UPDATE user_progress SET "
-        "plant_health = MIN(100, plant_health + ?), "
+        "plant_health = MIN(100, COALESCE(plant_health, 100) + ?), "
         "updated_at = ? WHERE user_id = ?",
         (amount, now, user_id),
     )
@@ -176,7 +172,7 @@ def apply_wrong_answers(user_id: int, wrong_count: int) -> dict:
     now = now_utc().isoformat()
     db.execute(
         "UPDATE user_progress SET "
-        "plant_health = MAX(0, plant_health - ?), "
+        "plant_health = MAX(0, COALESCE(plant_health, 100) - ?), "
         "updated_at = ? WHERE user_id = ?",
         (damage, now, user_id),
     )

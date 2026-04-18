@@ -86,7 +86,7 @@ async def admin_unlock(user: dict = auth.CurrentUser):
                 (user["id"], lvl["id"], now),
             )
     db.execute(
-        "UPDATE user_progress SET coins = 9999, plant_xp = 9999, updated_at = ? WHERE user_id = ?",
+        "UPDATE user_progress SET coins = 9999, plant_xp = 9999, plant_health = 100, updated_at = ? WHERE user_id = ?",
         (now, user["id"]),
     )
     return {
