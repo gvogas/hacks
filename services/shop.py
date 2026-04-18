@@ -3,7 +3,7 @@ from typing import Literal
 
 from fastapi import HTTPException
 
-from services import db
+from services import db, plant as plant_svc
 from services.auth import now_utc
 
 BASE_COIN_RATE_PER_MINUTE = 2
@@ -102,6 +102,7 @@ def get_shop_state(user_id: int) -> dict:
         "seconds_until_next_coin": (60 - progress["unpaid_seconds"]) % 60,
         "coin_rate_per_minute": coin_rate_per_minute(levels),
         "upgrades": [_serialize_upgrade(upgrade, levels.get(upgrade.id, 0), coins) for upgrade in SHOP_UPGRADES],
+        "plant": plant_svc.get_plant_state(user_id),
     }
 
 
@@ -126,7 +127,12 @@ def record_study_time(user_id: int, elapsed_seconds: int) -> dict:
             (coins_awarded, coins_awarded, seconds, remaining_seconds, now_utc().isoformat(), user_id),
         )
 
-    return {"coins_awarded": coins_awarded, "state": get_shop_state(user_id)}
+    plant_svc.apply_study_tick(user_id, seconds)
+    return {
+        "coins_awarded": coins_awarded,
+        "state": get_shop_state(user_id),
+        "plant": plant_svc.get_plant_state(user_id),
+    }
 
 
 def purchase_upgrade(user_id: int, upgrade_id: str) -> dict:
@@ -176,6 +182,23 @@ def award_quiz_bonus(user_id: int) -> int:
 
 def award_plan_bonus(user_id: int) -> int:
     return _award_upgrade_bonus(user_id, PLAN_COMPASS)
+
+
+def deduct_coins(user_id: int, amount: int) -> int:
+    """Deduct up to `amount` coins, never going below zero. Returns coins actually removed."""
+    ensure_progress(user_id)
+    amount = max(0, int(amount))
+    if not amount:
+        return 0
+    progress = _progress_row(user_id)
+    actual = min(amount, progress["coins"])
+    if actual:
+        now = now_utc().isoformat()
+        db.execute(
+            "UPDATE user_progress SET coins = coins - ?, updated_at = ? WHERE user_id = ?",
+            (actual, now, user_id),
+        )
+    return actual
 
 
 def grant_coins(user_id: int, amount: int) -> dict:

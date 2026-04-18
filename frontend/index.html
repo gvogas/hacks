@@ -44,7 +44,10 @@
     </div>
     <div class="header-right">
       <span id="coin-badge" class="coin-badge" title="Coins earned while studying">$ 0</span>
-      <span id="user-badge"></span>
+      <button id="profile-btn" class="header-profile-btn" type="button" onclick="switchTab('profile')" title="Open profile">
+        <span class="header-profile-star">★</span>
+        <span>Profile</span>
+      </button>
       <span id="session-badge"></span>
       <button id="history-btn" class="header-btn" type="button" onclick="toggleHistory()" title="View past sessions">History</button>
       <button id="reset-btn" class="header-btn" type="button" onclick="resetSession()" title="Start a new session">New session</button>
@@ -61,6 +64,23 @@
     <div id="history-list" class="history-list"></div>
   </aside>
   <div id="history-backdrop" class="history-backdrop" onclick="toggleHistory()"></div>
+
+  <!-- Plant Widget -->
+  <div id="plant-widget" class="plant-widget">
+    <div class="plant-art-wrap">
+      <div id="plant-art" class="plant-art"></div>
+    </div>
+    <div class="plant-info">
+      <div class="plant-info-top">
+        <span class="plant-stage-name" id="plant-stage-name">Seed</span>
+        <span class="plant-health-label" id="plant-health-label">100% health</span>
+      </div>
+      <div class="plant-health-track">
+        <div class="plant-health-fill" id="plant-health-fill" style="width:100%"></div>
+      </div>
+      <div class="plant-hint" id="plant-hint">Study to help it grow &bull; Wrong answers make it wither</div>
+    </div>
+  </div>
 
   <nav class="tabs" role="tablist">
     <button class="tab-btn active" data-tab="research" data-step="1">
@@ -238,6 +258,158 @@
     </div>
     <div id="shop-grid" class="shop-grid"></div>
   </section>
+
+  <!-- SECTION 7: Profile -->
+  <section id="tab-profile" class="tab-section">
+    <div class="profile-heading">
+      <div>
+        <h2>Your Profile</h2>
+        <p class="section-hint">A snapshot of your study journey, your plant, and the rewards you've earned.</p>
+      </div>
+      <button id="settings-btn" class="settings-gear-btn" type="button" onclick="openSettings()" title="Settings" aria-label="Settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+      </button>
+    </div>
+
+    <div class="profile-stats">
+      <div class="profile-stat">
+        <span class="profile-stat-label">Study time</span>
+        <strong id="profile-study-time">0m</strong>
+      </div>
+      <div class="profile-stat">
+        <span class="profile-stat-label">Coins</span>
+        <strong id="profile-coins">0</strong>
+      </div>
+      <div class="profile-stat">
+        <span class="profile-stat-label">Quizzes taken</span>
+        <strong id="profile-quizzes">0</strong>
+      </div>
+      <div class="profile-stat">
+        <span class="profile-stat-label">Avg score</span>
+        <strong id="profile-avg-score">0%</strong>
+      </div>
+    </div>
+
+    <div class="profile-section-title">Quiz history</div>
+    <div id="profile-history" class="profile-history">
+      <div class="profile-history-empty">No quizzes taken yet.</div>
+    </div>
+
+    <div class="profile-section-title">Your plant</div>
+    <div class="profile-plant-showcase">
+      <div id="profile-plant-desc" class="profile-plant-desc">
+        <div class="profile-plant-desc-title">Select a level on the right</div>
+        <p class="profile-plant-desc-body">Click any tier to view its description. Reach a tier by earning study XP — then claim coins and unlock that tier's skin for your plant.</p>
+      </div>
+      <div class="profile-plant-center">
+        <div id="profile-plant-art" class="profile-plant-art"></div>
+        <div class="profile-plant-meta">
+          <span id="profile-plant-stage">Seed</span>
+          <span class="sep">·</span>
+          <span id="profile-plant-xp">0 XP</span>
+        </div>
+        <div class="profile-plant-healthbar">
+          <div id="profile-plant-health-fill" class="profile-plant-health-fill" style="width:100%"></div>
+        </div>
+      </div>
+      <div id="profile-level-tabs" class="profile-level-tabs"></div>
+    </div>
+  </section>
+
+  <!-- Settings modal -->
+  <div id="settings-overlay" class="settings-overlay" style="display:none" onclick="handleSettingsBackdrop(event)">
+    <div class="settings-modal" role="dialog" aria-labelledby="settings-title">
+      <div class="settings-header">
+        <h3 id="settings-title">Settings</h3>
+        <button type="button" class="settings-close" onclick="closeSettings()" aria-label="Close">×</button>
+      </div>
+
+      <div class="settings-body">
+        <div class="settings-group">
+          <div class="settings-group-title">Account</div>
+          <div class="settings-row">
+            <label>Email</label>
+            <span id="settings-email" class="settings-static">—</span>
+          </div>
+          <div class="settings-row">
+            <label>Session</label>
+            <button class="btn-secondary settings-inline-btn" type="button" onclick="closeSettings(); logout();">Log out</button>
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <div class="settings-group-title">Appearance</div>
+          <div class="settings-row">
+            <label for="setting-dark-mode">Dark mode</label>
+            <label class="toggle-switch">
+              <input type="checkbox" id="setting-dark-mode" onchange="updateSetting('darkMode', this.checked)" />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="settings-row">
+            <label for="setting-compact">Compact mode</label>
+            <label class="toggle-switch">
+              <input type="checkbox" id="setting-compact" onchange="updateSetting('compactMode', this.checked)" />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <div class="settings-group-title">Notifications</div>
+          <div class="settings-row">
+            <label for="setting-toasts">Show toast notifications</label>
+            <label class="toggle-switch">
+              <input type="checkbox" id="setting-toasts" onchange="updateSetting('toasts', this.checked)" />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="settings-row">
+            <label for="setting-sound">Sound on correct / wrong</label>
+            <label class="toggle-switch">
+              <input type="checkbox" id="setting-sound" onchange="updateSetting('sound', this.checked)" />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <div class="settings-group-title">Study defaults</div>
+          <div class="settings-row">
+            <label for="setting-flashcards">Default flashcard count</label>
+            <input id="setting-flashcards" type="number" min="1" max="30"
+                   onchange="updateSetting('defaultFlashcards', parseInt(this.value) || 10)" />
+          </div>
+          <div class="settings-row">
+            <label for="setting-quiz">Default quiz questions</label>
+            <input id="setting-quiz" type="number" min="1" max="20"
+                   onchange="updateSetting('defaultQuiz', parseInt(this.value) || 5)" />
+          </div>
+          <div class="settings-row">
+            <label for="setting-plan-days">Default study plan days</label>
+            <input id="setting-plan-days" type="number" min="1" max="30"
+                   onchange="updateSetting('defaultPlanDays', parseInt(this.value) || 7)" />
+          </div>
+          <div class="settings-row">
+            <label for="setting-plan-hours">Default hours per day</label>
+            <input id="setting-plan-hours" type="number" min="0.5" max="12" step="0.5"
+                   onchange="updateSetting('defaultPlanHours', parseFloat(this.value) || 2)" />
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <div class="settings-group-title danger">Danger zone</div>
+          <div class="settings-row">
+            <label>Reset settings</label>
+            <button class="btn-secondary settings-inline-btn danger" type="button" onclick="resetSettings()">Reset to defaults</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 

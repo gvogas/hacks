@@ -69,6 +69,26 @@ def _init_schema(conn: sqlite3.Connection):
         );
         """
     )
+    for col, defn in [
+        ("plant_xp", "INTEGER NOT NULL DEFAULT 0"),
+        ("plant_health", "INTEGER NOT NULL DEFAULT 100"),
+        ("plant_skin", "TEXT NOT NULL DEFAULT 'default'"),
+    ]:
+        try:
+            conn.execute(f"ALTER TABLE user_progress ADD COLUMN {col} {defn}")
+        except Exception:
+            pass
+
+    conn.executescript(
+        """
+        CREATE TABLE IF NOT EXISTS user_plant_rewards (
+            user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            level_id   TEXT NOT NULL,
+            claimed_at TEXT NOT NULL,
+            PRIMARY KEY (user_id, level_id)
+        );
+        """
+    )
 
 
 def execute(sql: str, params: tuple = ()) -> sqlite3.Cursor:
