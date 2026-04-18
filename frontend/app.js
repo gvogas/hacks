@@ -23,6 +23,139 @@ window.onSpotifyWebPlaybackSDKReady = () => {
   if (authToken && spotifyState?.connected) initSpotifyWebPlayer();
 };
 
+const PLANT_SVGS = [
+  // Stage 0: Seed
+  `<svg viewBox="0 0 80 90" xmlns="http://www.w3.org/2000/svg">
+    <ellipse cx="40" cy="82" rx="30" ry="8" fill="#A0784E"/>
+    <ellipse cx="40" cy="82" rx="26" ry="6" fill="#8D6E63"/>
+    <ellipse cx="40" cy="76" rx="6" ry="5" fill="#5D4037"/>
+    <line x1="40" y1="71" x2="40" y2="64" stroke="#66BB6A" stroke-width="2.5" stroke-linecap="round"/>
+  </svg>`,
+  // Stage 1: Sprout
+  `<svg viewBox="0 0 80 90" xmlns="http://www.w3.org/2000/svg">
+    <ellipse cx="40" cy="82" rx="30" ry="8" fill="#A0784E"/>
+    <ellipse cx="40" cy="82" rx="26" ry="6" fill="#8D6E63"/>
+    <line x1="40" y1="80" x2="40" y2="54" stroke="#558B2F" stroke-width="3" stroke-linecap="round"/>
+    <ellipse cx="27" cy="67" rx="13" ry="7" fill="#8BC34A" transform="rotate(-30 27 67)"/>
+    <ellipse cx="53" cy="62" rx="13" ry="7" fill="#7CB342" transform="rotate(30 53 62)"/>
+    <circle cx="40" cy="53" r="5" fill="#558B2F"/>
+  </svg>`,
+  // Stage 2: Seedling
+  `<svg viewBox="0 0 80 90" xmlns="http://www.w3.org/2000/svg">
+    <ellipse cx="40" cy="82" rx="30" ry="8" fill="#A0784E"/>
+    <ellipse cx="40" cy="82" rx="26" ry="6" fill="#8D6E63"/>
+    <line x1="40" y1="80" x2="40" y2="42" stroke="#558B2F" stroke-width="3.5" stroke-linecap="round"/>
+    <ellipse cx="24" cy="66" rx="14" ry="8" fill="#8BC34A" transform="rotate(-35 24 66)"/>
+    <ellipse cx="56" cy="60" rx="14" ry="8" fill="#7CB342" transform="rotate(35 56 60)"/>
+    <ellipse cx="20" cy="53" rx="13" ry="7" fill="#66BB6A" transform="rotate(-45 20 53)"/>
+    <ellipse cx="60" cy="47" rx="13" ry="7" fill="#4CAF50" transform="rotate(45 60 47)"/>
+    <circle cx="40" cy="41" r="5" fill="#388E3C"/>
+  </svg>`,
+  // Stage 3: Young Plant
+  `<svg viewBox="0 0 80 90" xmlns="http://www.w3.org/2000/svg">
+    <ellipse cx="40" cy="82" rx="30" ry="8" fill="#A0784E"/>
+    <ellipse cx="40" cy="82" rx="26" ry="6" fill="#8D6E63"/>
+    <line x1="40" y1="80" x2="40" y2="27" stroke="#558B2F" stroke-width="4" stroke-linecap="round"/>
+    <ellipse cx="24" cy="67" rx="14" ry="8" fill="#8BC34A" transform="rotate(-35 24 67)"/>
+    <ellipse cx="56" cy="61" rx="14" ry="8" fill="#7CB342" transform="rotate(35 56 61)"/>
+    <ellipse cx="19" cy="53" rx="14" ry="8" fill="#66BB6A" transform="rotate(-44 19 53)"/>
+    <ellipse cx="61" cy="47" rx="14" ry="8" fill="#4CAF50" transform="rotate(44 61 47)"/>
+    <ellipse cx="21" cy="39" rx="13" ry="7" fill="#43A047" transform="rotate(-50 21 39)"/>
+    <ellipse cx="59" cy="33" rx="13" ry="7" fill="#388E3C" transform="rotate(50 59 33)"/>
+    <circle cx="40" cy="26" r="6" fill="#2E7D32"/>
+  </svg>`,
+  // Stage 4: Budding
+  `<svg viewBox="0 0 80 90" xmlns="http://www.w3.org/2000/svg">
+    <ellipse cx="40" cy="82" rx="30" ry="8" fill="#A0784E"/>
+    <ellipse cx="40" cy="82"rx="26" ry="6" fill="#8D6E63"/>
+    <line x1="40" y1="80" x2="40" y2="22" stroke="#558B2F" stroke-width="4" stroke-linecap="round"/>
+    <ellipse cx="24" cy="67" rx="13" ry="7" fill="#8BC34A" transform="rotate(-35 24 67)"/>
+    <ellipse cx="56" cy="61" rx="13" ry="7" fill="#7CB342" transform="rotate(35 56 61)"/>
+    <ellipse cx="19" cy="53" rx="13" ry="7" fill="#66BB6A" transform="rotate(-44 19 53)"/>
+    <ellipse cx="61" cy="47" rx="13" ry="7" fill="#4CAF50" transform="rotate(44 61 47)"/>
+    <ellipse cx="22" cy="39" rx="12" ry="7" fill="#43A047" transform="rotate(-50 22 39)"/>
+    <ellipse cx="58" cy="33" rx="12" ry="7" fill="#388E3C" transform="rotate(50 58 33)"/>
+    <ellipse cx="40" cy="13" rx="7" ry="11" fill="#C62828"/>
+    <ellipse cx="40" cy="13" rx="5" ry="8" fill="#E53935"/>
+    <ellipse cx="40" cy="15" rx="3" ry="5" fill="#EF9A9A"/>
+  </svg>`,
+  // Stage 5: Full Bloom — Full bloom is the plant's final stage.
+  `<svg viewBox="0 0 80 90" xmlns="http://www.w3.org/2000/svg">
+    <ellipse cx="40" cy="82" rx="30" ry="8" fill="#A0784E"/>
+    <ellipse cx="40" cy="82" rx="26" ry="6" fill="#8D6E63"/>
+    <line x1="40" y1="80" x2="40" y2="38" stroke="#558B2F" stroke-width="4" stroke-linecap="round"/>
+    <ellipse cx="24" cy="67" rx="13" ry="7" fill="#8BC34A" transform="rotate(-35 24 67)"/>
+    <ellipse cx="56" cy="61" rx="13" ry="7" fill="#7CB342" transform="rotate(35 56 61)"/>
+    <ellipse cx="20" cy="55" rx="13" ry="7" fill="#66BB6A" transform="rotate(-44 20 55)"/>
+    <ellipse cx="60" cy="49" rx="13" ry="7" fill="#4CAF50" transform="rotate(44 60 49)"/>
+    <ellipse cx="40" cy="14" rx="6" ry="9" fill="#E91E63"/>
+    <ellipse cx="40" cy="14" rx="6" ry="9" fill="#F48FB1" transform="rotate(60 40 26)"/>
+    <ellipse cx="40" cy="14" rx="6" ry="9" fill="#E91E63" transform="rotate(120 40 26)"/>
+    <ellipse cx="40" cy="14" rx="6" ry="9" fill="#F48FB1" transform="rotate(180 40 26)"/>
+    <ellipse cx="40" cy="14" rx="6" ry="9" fill="#E91E63" transform="rotate(240 40 26)"/>
+    <ellipse cx="40" cy="14" rx="6" ry="9" fill="#F48FB1" transform="rotate(300 40 26)"/>
+    <circle cx="40" cy="26" r="8" fill="#FDD835"/>
+    <circle cx="40" cy="26" r="5" fill="#F57F17"/>
+    <circle cx="40" cy="26" r="2.5" fill="#E65100"/>
+  </svg>`,
+];
+
+function renderPlant(state, animate) {
+  if (!state) return;
+  const prevStage = plantState ? plantState.stage : -1;
+  const prevHealth = plantState ? plantState.health : 100;
+  plantState = state;
+
+  const artEl = document.getElementById('plant-art');
+  const nameEl = document.getElementById('plant-stage-name');
+  const fillEl = document.getElementById('plant-health-fill');
+  const labelEl = document.getElementById('plant-health-label');
+  const hintEl = document.getElementById('plant-hint');
+  if (!artEl) return;
+
+  artEl.innerHTML = PLANT_SVGS[state.stage] || PLANT_SVGS[0];
+
+  fillEl.style.width = state.health + '%';
+  if (state.health > 60) {
+    fillEl.style.background = 'linear-gradient(90deg,#66BB6A,#43A047)';
+  } else if (state.health > 30) {
+    fillEl.style.background = 'linear-gradient(90deg,#FDD835,#F9A825)';
+  } else {
+    fillEl.style.background = 'linear-gradient(90deg,#EF5350,#C62828)';
+  }
+
+  nameEl.textContent = state.stage_name;
+  labelEl.textContent = state.health + '% health';
+
+  artEl.className = 'plant-art skin-' + (state.skin || 'default');
+  if (state.health <= 0) {
+    artEl.classList.add('plant-dead');
+    hintEl.textContent = 'Withered! -30 coins. Study to revive it.';
+  } else if (state.health < 30) {
+    artEl.classList.add('plant-wilting');
+    hintEl.textContent = 'Your plant is struggling — keep studying to restore it!';
+  } else if (state.health < 60) {
+    artEl.classList.add('plant-stressed');
+    hintEl.textContent = 'Your plant needs care — avoid wrong answers!';
+  } else if (state.stage < 5) {
+    hintEl.textContent = state.stage_progress + '% to next stage — keep studying!';
+  } else {
+    hintEl.textContent = 'Your plant is in full bloom! Keep it healthy.';
+  }
+
+  if (animate === 'wither') {
+    artEl.classList.add('plant-wither-anim');
+    setTimeout(() => artEl.classList.remove('plant-wither-anim'), 800);
+  } else if (prevStage !== -1 && state.stage > prevStage) {
+    artEl.classList.add('plant-grow-anim');
+    setTimeout(() => artEl.classList.remove('plant-grow-anim'), 950);
+    toast('Your plant grew! Now: ' + state.stage_name, 'success');
+  } else if (state.health > prevHealth) {
+    artEl.classList.add('plant-heal-anim');
+    setTimeout(() => artEl.classList.remove('plant-heal-anim'), 650);
+  }
+}
+
 const state = {
   notes: false,
   learning: false,
@@ -121,6 +254,8 @@ document.getElementById('auth-password')?.addEventListener('keydown', e => {
 document.getElementById('auth-email')?.addEventListener('keydown', e => {
   if (e.key === 'Enter') { e.preventDefault(); document.getElementById('auth-password').focus(); }
 });
+
+// ── Spotify ──────────────────────────────────────────────────────────────────
 
 function setupSpotifyControls() {
   const headerRight = document.querySelector('.header-right');
@@ -514,14 +649,14 @@ function renderSpotifyCurrent(current) {
 
   const item = current.item;
   const device = current.device?.name ? ` on ${current.device.name}` : '';
-  const state = current.is_playing ? 'Playing' : 'Paused';
+  const playState = current.is_playing ? 'Playing' : 'Paused';
   const subtitle = [item.artist, item.album].filter(Boolean).join(' - ');
   const progress = current.duration_ms ? Math.min(100, Math.round((current.progress_ms / current.duration_ms) * 100)) : 0;
   const art = item.image_url
     ? `<img src="${escHtml(item.image_url)}" alt="" loading="lazy" />`
     : '<div class="spotify-art-placeholder"></div>';
 
-  title.textContent = `${state}${device}`;
+  title.textContent = `${playState}${device}`;
   container.innerHTML = `<article class="spotify-current">
     <div class="spotify-art spotify-current-art">${art}</div>
     <div class="spotify-current-info">
@@ -868,13 +1003,28 @@ function toggleAccordion(i) {
 async function generateLearning() {
   const btn = document.getElementById('generate-learning-btn');
   const status = document.getElementById('learning-status');
+  const flashcardsInput = document.getElementById('flashcards-count');
+  const quizInput = document.getElementById('quiz-count');
+
+  let numFlashcards = parseInt(flashcardsInput.value, 10);
+  let numQuestions = parseInt(quizInput.value, 10);
+
+  if (Number.isNaN(numFlashcards) || numFlashcards < 1) numFlashcards = 10;
+  if (Number.isNaN(numQuestions) || numQuestions < 1) numQuestions = 5;
+  numFlashcards = Math.min(Math.max(numFlashcards, 1), 30);
+  numQuestions = Math.min(Math.max(numQuestions, 1), 20);
+
   btn.disabled = true;
   setStatus(status, 'Generating flashcards and quiz...');
 
   try {
     const res = await apiJson('/api/study/generate-learning', {
       method: 'POST',
-      body: JSON.stringify({ session_id: sessionId, num_flashcards: 10, num_questions: 5 }),
+      body: JSON.stringify({
+        session_id: sessionId,
+        num_flashcards: numFlashcards,
+        num_questions: numQuestions,
+      }),
     });
 
     flashcards = res.flashcards || [];
@@ -1097,6 +1247,7 @@ async function loadShopState() {
     shopState = await apiJson('/api/shop/state', { method: 'GET' });
     renderCoinBadge();
     renderShop();
+    if (shopState.plant) renderPlant(shopState.plant);
   } catch (err) {
     console.warn('Could not load shop state:', err.message);
   }
@@ -1423,6 +1574,7 @@ async function recordStudyTick() {
     shopState = res.state;
     renderCoinBadge();
     renderShop();
+    if (res.plant) renderPlant(res.plant);
   } catch (err) {
     console.warn('Study coin tick failed:', err.message);
   }
