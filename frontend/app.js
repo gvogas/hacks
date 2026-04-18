@@ -6,6 +6,9 @@ let authMode = 'login'; // 'login' | 'signup'
 let flashcards = [];
 let cardIndex = 0;
 let quizQuestions = [];
+let shopState = null;
+let studyTickTimer = null;
+let lastStudyTickMs = null;
 
 const state = {
   notes: false,
@@ -29,6 +32,7 @@ function showApp() {
   if (sessionId) {
     document.getElementById('session-badge').textContent = 'session: ' + sessionId.slice(0, 8);
   }
+  renderCoinBadge();
 }
 
 function toggleAuthMode() {
@@ -74,6 +78,8 @@ async function submitAuth() {
     sessionId = null;
     setStatus(status, '');
     showApp();
+    await loadShopState();
+    startStudyTicker();
     await loadSessionList();
     toast(authMode === 'login' ? 'Welcome back!' : 'Account created.', 'success');
   } catch (err) {
@@ -438,7 +444,11 @@ async function generateLearning() {
     markCompleted('notes');
     updateTabLocks();
     setStatus(status, '');
-    toast(`Created ${flashcards.length} flashcards and ${quizQuestions.length} quiz questions.`, 'success');
+    if (res.coins_awarded) await loadShopState();
+    toast(
+      `Created ${flashcards.length} flashcards and ${quizQuestions.length} quiz questions.${coinSuffix(res.coins_awarded)}`,
+      'success'
+    );
   } catch (err) {
     setStatus(status, 'Error: ' + err.message, true);
     toast(err.message, 'error');
@@ -550,7 +560,8 @@ async function submitQuiz() {
 
     renderQuizResults(res);
     markCompleted('quiz');
-    toast(`Scored ${res.score} / ${res.total}`, 'success');
+    if (res.coins_awarded) await loadShopState();
+    toast(`Scored ${res.score} / ${res.total}${coinSuffix(res.coins_awarded)}`, 'success');
   } catch (err) {
     toast('Error submitting quiz: ' + err.message, 'error');
   } finally {
@@ -598,7 +609,8 @@ async function generatePlan() {
     renderPlan(res.plan || []);
     markCompleted('plan');
     setStatus(status, '');
-    toast('Study plan ready.', 'success');
+    if (res.coins_awarded) await loadShopState();
+    toast(`Study plan ready.${coinSuffix(res.coins_awarded)}`, 'success');
   } catch (err) {
     setStatus(status, 'Error: ' + err.message, true);
     toast(err.message, 'error');
@@ -628,6 +640,123 @@ function renderPlan(plan) {
   });
 
   container.innerHTML = html;
+}
+
+// Shop
+
+async function loadShopState() {
+  if (!authToken) return;
+  try {
+    shopState = await apiJson('/api/shop/state', { method: 'GET' });
+    renderCoinBadge();
+    renderShop();
+  } catch (err) {
+    console.warn('Could not load shop state:', err.message);
+  }
+}
+
+function renderCoinBadge() {
+  const badge = document.getElementById('coin-badge');
+  if (!badge) return;
+  const coins = shopState?.coins ?? 0;
+  const rate = shopState?.coin_rate_per_minute ?? 0;
+  badge.textContent = `$ ${coins}`;
+  badge.title = rate ? `${rate} coins per minute while studying` : 'Coins earned while studying';
+}
+
+function renderShop() {
+  if (!shopState) return;
+  const total = document.getElementById('shop-coin-total');
+  const rate = document.getElementById('shop-coin-rate');
+  const time = document.getElementById('shop-study-time');
+  const grid = document.getElementById('shop-grid');
+  if (!grid) return;
+
+  total.textContent = shopState.coins;
+  rate.textContent = `${shopState.coin_rate_per_minute}/min`;
+  time.textContent = formatStudyTime(shopState.study_seconds || 0);
+
+  grid.innerHTML = (shopState.upgrades || []).map(upgrade => {
+    const pct = Math.round((upgrade.level / upgrade.max_level) * 100);
+    const buttonText = upgrade.maxed ? 'Maxed' : `${upgrade.next_cost} coins`;
+    const disabled = upgrade.maxed || !upgrade.affordable;
+    return `<article class="shop-card ${upgrade.maxed ? 'maxed' : ''}">
+      <div class="shop-card-head">
+        <div>
+          <h3>${escHtml(upgrade.name)}</h3>
+          <span class="shop-effect">${escHtml(upgrade.effect_label)}</span>
+        </div>
+        <span class="shop-level">Lv ${upgrade.level}/${upgrade.max_level}</span>
+      </div>
+      <p>${escHtml(upgrade.description)}</p>
+      <div class="shop-progress" aria-hidden="true"><span style="width:${pct}%"></span></div>
+      <button class="btn-primary shop-buy-btn" type="button" onclick="buyUpgrade('${escHtml(upgrade.id)}')" ${disabled ? 'disabled' : ''}>
+        ${escHtml(buttonText)}
+      </button>
+    </article>`;
+  }).join('');
+}
+
+async function buyUpgrade(upgradeId) {
+  try {
+    const res = await apiJson('/api/shop/purchase', {
+      method: 'POST',
+      body: JSON.stringify({ upgrade_id: upgradeId }),
+    });
+    shopState = res.state;
+    renderCoinBadge();
+    renderShop();
+    toast(`Upgrade purchased. Level ${res.level}.`, 'success');
+  } catch (err) {
+    toast(err.message, 'error');
+  }
+}
+
+function startStudyTicker() {
+  clearInterval(studyTickTimer);
+  lastStudyTickMs = Date.now();
+  studyTickTimer = setInterval(recordStudyTick, 60000);
+}
+
+async function recordStudyTick() {
+  if (!authToken) return;
+  if (document.hidden) {
+    lastStudyTickMs = Date.now();
+    return;
+  }
+
+  const now = Date.now();
+  const elapsed = Math.min(300, Math.floor((now - (lastStudyTickMs || now)) / 1000));
+  if (elapsed < 30) return;
+  lastStudyTickMs = now;
+
+  try {
+    const res = await apiJson('/api/shop/study-tick', {
+      method: 'POST',
+      body: JSON.stringify({ elapsed_seconds: elapsed }),
+    });
+    shopState = res.state;
+    renderCoinBadge();
+    renderShop();
+  } catch (err) {
+    console.warn('Study coin tick failed:', err.message);
+  }
+}
+
+document.addEventListener('visibilitychange', () => {
+  lastStudyTickMs = Date.now();
+});
+
+function formatStudyTime(seconds) {
+  const mins = Math.floor(seconds / 60);
+  if (mins < 60) return `${mins}m`;
+  const hours = Math.floor(mins / 60);
+  const rest = mins % 60;
+  return rest ? `${hours}h ${rest}m` : `${hours}h`;
+}
+
+function coinSuffix(amount) {
+  return amount ? ` +${amount} coins` : '';
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -718,6 +847,8 @@ async function bootstrap() {
     currentUser = res.user;
     showApp();
     updateTabLocks();
+    await loadShopState();
+    startStudyTicker();
     await loadSessionList();
   } catch {
     showAuth();

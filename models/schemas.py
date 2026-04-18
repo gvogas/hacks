@@ -42,3 +42,11 @@ class PlanGenerateRequest(BaseModel):
     session_id: SessionId
     available_days: int = Field(default=7, ge=1, le=30)
     hours_per_day: float = Field(default=2.0, ge=0.5, le=12.0)
+
+
+class StudyTickRequest(BaseModel):
+    elapsed_seconds: int = Field(ge=1, le=900)
+
+
+class PurchaseUpgradeRequest(BaseModel):
+    upgrade_id: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=80)]

@@ -1,6 +1,10 @@
 .env
 uploads/
 __pycache__/
+.pytest_cache/
+.tmp_pytest/
+.pytest_tmp_run_*/
+pytest_tmp_run_*/
 *.pyc
 *.pyo
 .venv/

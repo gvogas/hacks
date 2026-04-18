@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException
 
 from agents.planning_agent import PlanningAgent
 from models.schemas import PlanGenerateRequest
-from services import auth, session_store
+from services import auth, session_store, shop
 
 router = APIRouter()
 planning_agent = PlanningAgent()
@@ -24,4 +24,5 @@ async def generate_plan(req: PlanGenerateRequest, user: dict = auth.CurrentUser)
         hours_per_day=req.hours_per_day,
     )
     session_store.update_session(req.session_id, user["id"], {"study_plan": plan})
-    return {"session_id": req.session_id, **plan}
+    coins_awarded = shop.award_plan_bonus(user["id"])
+    return {"session_id": req.session_id, "coins_awarded": coins_awarded, **plan}

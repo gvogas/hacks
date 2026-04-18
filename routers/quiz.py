@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException
 
 from models.schemas import QuizSubmitRequest
-from services import auth, session_store
+from services import auth, session_store, shop
 
 router = APIRouter()
 
@@ -57,6 +57,7 @@ async def submit_quiz(req: QuizSubmitRequest, user: dict = auth.CurrentUser):
     existing_history = session.get("quiz_history", [])
     existing_history.append(history_entry)
     session_store.update_session(req.session_id, user["id"], {"quiz_history": existing_history})
+    coins_awarded = shop.award_quiz_bonus(user["id"])
 
     return {
         "session_id": req.session_id,
@@ -65,4 +66,5 @@ async def submit_quiz(req: QuizSubmitRequest, user: dict = auth.CurrentUser):
         "percentage": history_entry["percentage"],
         "weak_topics": weak_topics,
         "results": results,
+        "coins_awarded": coins_awarded,
     }
