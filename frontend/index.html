@@ -43,6 +43,7 @@
       <p class="header-subtitle">Pick a topic → we generate notes, flashcards, a quiz, and a study plan.</p>
     </div>
     <div class="header-right">
+      <span id="coin-badge" class="coin-badge" title="Coins earned while studying">$ 0</span>
       <span id="user-badge"></span>
       <span id="session-badge"></span>
       <button id="history-btn" class="header-btn" type="button" onclick="toggleHistory()" title="View past sessions">History</button>
@@ -80,6 +81,9 @@
     <button class="tab-btn" data-tab="plan" data-step="5" data-requires="notes">
       <span class="tab-num">5</span> Study Plan
       <span class="tab-lock" aria-hidden="true">🔒</span>
+    </button>
+    <button class="tab-btn shop-tab" data-tab="shop">
+      <span class="tab-num">$</span> Shop
     </button>
   </nav>
 
@@ -204,6 +208,27 @@
       </div>
     </div>
     <div id="plan-content"></div>
+  </section>
+
+  <!-- SECTION 6: Shop -->
+  <section id="tab-shop" class="tab-section">
+    <h2>Upgrade Shop</h2>
+    <p class="section-hint">Coins build up while you study. Upgrades make future study sessions more rewarding.</p>
+    <div class="shop-summary">
+      <div>
+        <span class="shop-kicker">Coins</span>
+        <strong id="shop-coin-total">0</strong>
+      </div>
+      <div>
+        <span class="shop-kicker">Rate</span>
+        <strong id="shop-coin-rate">0/min</strong>
+      </div>
+      <div>
+        <span class="shop-kicker">Study Time</span>
+        <strong id="shop-study-time">0m</strong>
+      </div>
+    </div>
+    <div id="shop-grid" class="shop-grid"></div>
   </section>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>

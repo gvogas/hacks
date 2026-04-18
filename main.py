@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from routers import study, upload, quiz, plan, auth as auth_router
+from routers import study, upload, quiz, plan, shop, auth as auth_router
 from services import db as _db
 from services.exceptions import ExternalServiceError
 
@@ -83,6 +83,7 @@ def create_app() -> FastAPI:
     app.include_router(upload.router, prefix="/api", tags=["upload"])
     app.include_router(quiz.router, prefix="/api/quiz", tags=["quiz"])
     app.include_router(plan.router, prefix="/api/plan", tags=["plan"])
+    app.include_router(shop.router, prefix="/api/shop", tags=["shop"])
 
     @app.get("/api/health", tags=["system"])
     async def health():

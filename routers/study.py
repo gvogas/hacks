@@ -4,7 +4,7 @@ from agents.content_agent import ContentAgent
 from agents.learning_agent import LearningAgent
 from agents.research_agent import ResearchAgent
 from models.schemas import GenerateLearningRequest, StudyStartRequest
-from services import auth, session_store
+from services import auth, session_store, shop
 from services.exceptions import ExternalServiceError
 
 router = APIRouter()
@@ -47,7 +47,8 @@ async def generate_learning(req: GenerateLearningRequest, user: dict = auth.Curr
         "flashcards": result.get("flashcards", []),
         "quiz_questions": result.get("quiz_questions", []),
     })
-    return {"session_id": req.session_id, **result}
+    coins_awarded = shop.award_learning_bonus(user["id"])
+    return {"session_id": req.session_id, "coins_awarded": coins_awarded, **result}
 
 
 @router.get("/sessions")
