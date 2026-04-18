@@ -1,21 +1,24 @@
 import sqlite3
 import threading
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 
 DB_PATH = Path(__file__).resolve().parent.parent / "app.db"
-_lock = threading.Lock()
+_lock = threading.RLock()
 _conn: sqlite3.Connection | None = None
 
 
 def get_conn() -> sqlite3.Connection:
     global _conn
-    if _conn is None:
-        _conn = sqlite3.connect(str(DB_PATH), check_same_thread=False, isolation_level=None)
-        _conn.row_factory = sqlite3.Row
-        _conn.execute("PRAGMA journal_mode=WAL")
-        _conn.execute("PRAGMA foreign_keys=ON")
-        _init_schema(_conn)
-    return _conn
+    with _lock:
+        if _conn is None:
+            _conn = sqlite3.connect(str(DB_PATH), check_same_thread=False, isolation_level=None)
+            _conn.row_factory = sqlite3.Row
+            _conn.execute("PRAGMA journal_mode=WAL")
+            _conn.execute("PRAGMA foreign_keys=ON")
+            _init_schema(_conn)
+        return _conn
 
 
 def close_conn() -> None:
@@ -81,3 +84,17 @@ def query_one(sql: str, params: tuple = ()) -> sqlite3.Row | None:
 def query_all(sql: str, params: tuple = ()) -> list[sqlite3.Row]:
     with _lock:
         return get_conn().execute(sql, params).fetchall()
+
+
+@contextmanager
+def transaction() -> Iterator[sqlite3.Connection]:
+    with _lock:
+        conn = get_conn()
+        try:
+            conn.execute("BEGIN IMMEDIATE")
+            yield conn
+            conn.execute("COMMIT")
+        except Exception:
+            if conn.in_transaction:
+                conn.execute("ROLLBACK")
+            raise

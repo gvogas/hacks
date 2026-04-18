@@ -40,7 +40,7 @@
   <header>
     <div class="header-left">
       <h1>AI Study Assistant</h1>
-      <p class="header-subtitle">Pick a topic → we generate notes, flashcards, a quiz, and a study plan.</p>
+      <p class="header-subtitle">Pick a topic &rarr; we generate notes, flashcards, a quiz, and a study plan.</p>
     </div>
     <div class="header-right">
       <span id="coin-badge" class="coin-badge" title="Coins earned while studying">$ 0</span>
@@ -68,19 +68,19 @@
     </button>
     <button class="tab-btn" data-tab="notes" data-step="2" data-requires="notes">
       <span class="tab-num">2</span> Notes
-      <span class="tab-lock" aria-hidden="true">🔒</span>
+      <span class="tab-lock" aria-hidden="true">&#128274;</span>
     </button>
     <button class="tab-btn" data-tab="flashcards" data-step="3" data-requires="learning">
       <span class="tab-num">3</span> Flashcards
-      <span class="tab-lock" aria-hidden="true">🔒</span>
+      <span class="tab-lock" aria-hidden="true">&#128274;</span>
     </button>
     <button class="tab-btn" data-tab="quiz" data-step="4" data-requires="learning">
       <span class="tab-num">4</span> Quiz
-      <span class="tab-lock" aria-hidden="true">🔒</span>
+      <span class="tab-lock" aria-hidden="true">&#128274;</span>
     </button>
     <button class="tab-btn" data-tab="plan" data-step="5" data-requires="notes">
       <span class="tab-num">5</span> Study Plan
-      <span class="tab-lock" aria-hidden="true">🔒</span>
+      <span class="tab-lock" aria-hidden="true">&#128274;</span>
     </button>
     <button class="tab-btn shop-tab" data-tab="shop">
       <span class="tab-num">$</span> Shop
@@ -103,10 +103,10 @@
         <div class="upload-area" id="upload-area">
           <input type="file" id="file-input" accept=".pdf,.pptx,.txt,.md" multiple hidden />
           <div class="upload-prompt">
-            <div class="upload-icon" aria-hidden="true">⬆</div>
+            <div class="upload-icon" aria-hidden="true">&#8593;</div>
             <div>
               <strong>Drag &amp; drop files here</strong>
-              <div class="upload-sub">or <button type="button" class="link-btn" onclick="document.getElementById('file-input').click()">browse</button> — PDF, PPTX, TXT, MD</div>
+              <div class="upload-sub">or <button type="button" class="link-btn" onclick="document.getElementById('file-input').click()">browse</button> - PDF, PPTX, TXT, MD</div>
             </div>
           </div>
           <div id="file-list"></div>
@@ -126,9 +126,9 @@
     <p class="section-hint">Your generated notes appear here. When you're ready, create flashcards and a quiz.</p>
     <div id="notes-content">
       <div class="empty-state">
-        <div class="empty-icon" aria-hidden="true">📝</div>
+        <div class="empty-icon" aria-hidden="true">&#128221;</div>
         <h3>No notes yet</h3>
-        <p>Start a research topic first — we'll summarize it into structured notes.</p>
+        <p>Start a research topic first - we'll summarize it into structured notes.</p>
         <button class="btn-secondary" onclick="switchTab('research')">Go to Research</button>
       </div>
     </div>
@@ -153,19 +153,19 @@
   <!-- SECTION 3: Flashcards -->
   <section id="tab-flashcards" class="tab-section">
     <h2>Flashcards</h2>
-    <p class="section-hint">Click a card to flip it. Use <kbd>←</kbd> <kbd>→</kbd> to navigate and <kbd>Space</kbd> to flip.</p>
+    <p class="section-hint">Click a card to flip it. Use <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to navigate and <kbd>Space</kbd> to flip.</p>
     <div id="flashcard-container">
       <div class="empty-state">
-        <div class="empty-icon" aria-hidden="true">🃏</div>
+        <div class="empty-icon" aria-hidden="true">&#127183;</div>
         <h3>No flashcards yet</h3>
         <p>Generate notes first, then create flashcards from them.</p>
         <button class="btn-secondary" onclick="switchTab('notes')">Go to Notes</button>
       </div>
     </div>
     <div id="flashcard-nav" style="display:none">
-      <button class="btn-secondary" onclick="prevCard()" title="Previous (←)">&#8592; Prev</button>
+      <button class="btn-secondary" onclick="prevCard()" title="Previous (&larr;)">&#8592; Prev</button>
       <span id="card-counter"></span>
-      <button class="btn-secondary" onclick="nextCard()" title="Next (→)">Next &#8594;</button>
+      <button class="btn-secondary" onclick="nextCard()" title="Next (&rarr;)">Next &#8594;</button>
     </div>
   </section>
 
@@ -175,7 +175,7 @@
     <p class="section-hint">Pick an answer for each question, then submit to see your results and weak areas.</p>
     <div id="quiz-container">
       <div class="empty-state">
-        <div class="empty-icon" aria-hidden="true">❓</div>
+        <div class="empty-icon" aria-hidden="true">?</div>
         <h3>No quiz yet</h3>
         <p>Generate notes first, then create a quiz from them.</p>
         <button class="btn-secondary" onclick="switchTab('notes')">Go to Notes</button>
@@ -190,7 +190,7 @@
   <!-- SECTION 5: Study Plan -->
   <section id="tab-plan" class="tab-section">
     <h2>Personalized Study Plan</h2>
-    <p class="section-hint">Tell us how much time you have — we'll build a day-by-day plan that focuses on your weak areas.</p>
+    <p class="section-hint">Tell us how much time you have - we'll build a day-by-day plan that focuses on your weak areas.</p>
     <div class="card" id="plan-inputs">
       <div class="field-row">
         <div class="field">

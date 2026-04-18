@@ -24,6 +24,25 @@ def test_study_tick_awards_coins_over_time(client, user):
     assert body["state"]["study_seconds"] == 60
 
 
+def test_study_tick_banks_partial_minutes(client, user):
+    first = client.post(
+        "/api/shop/study-tick",
+        headers=user["headers"],
+        json={"elapsed_seconds": 45},
+    ).json()
+    assert first["coins_awarded"] == 0
+    assert first["state"]["seconds_until_next_coin"] == 15
+
+    second = client.post(
+        "/api/shop/study-tick",
+        headers=user["headers"],
+        json={"elapsed_seconds": 20},
+    ).json()
+    assert second["coins_awarded"] == 2
+    assert second["state"]["coins"] == 2
+    assert second["state"]["study_seconds"] == 65
+
+
 def test_purchase_upgrade_spends_coins_and_changes_rate(client, user):
     from services import shop
 

@@ -53,7 +53,7 @@ body {
   100% { background-position: 100% 100%; }
 }
 
-/* ── Top progress bar ──────────────────────────────────────────────────────── */
+/* Top progress bar */
 .progress-bar {
   position: fixed;
   top: 0; left: 0; right: 0;
@@ -87,7 +87,7 @@ body {
   100% { left: 100%; }
 }
 
-/* ── Header ─────────────────────────────────────────────────────────────────── */
+/* Header */
 header {
   background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 55%, #ec4899 110%);
   color: white;
@@ -189,7 +189,7 @@ header h1::before {
   z-index: 1;
 }
 
-/* ── Tabs ──────────────────────────────────────────────────────────────────── */
+/* Tabs */
 .tabs {
   display: flex;
   gap: 0.25rem;
@@ -246,7 +246,7 @@ header h1::before {
 
 .tab-btn.active .tab-num { background: var(--primary); color: white; }
 .tab-btn.completed .tab-num { background: var(--accent); color: white; }
-.tab-btn.completed .tab-num::before { content: '✓'; font-size: 0.7rem; }
+.tab-btn.completed .tab-num::before { content: '\2713'; font-size: 0.7rem; }
 .tab-btn.completed .tab-num { font-size: 0; }
 .shop-tab .tab-num { background: #fef3c7; color: #92400e; }
 .shop-tab.active .tab-num { background: #f59e0b; color: white; }
@@ -260,7 +260,7 @@ header h1::before {
 }
 .tab-btn.locked:hover { background: transparent; }
 
-/* ── Sections ──────────────────────────────────────────────────────────────── */
+/* Sections */
 .tab-section {
   display: none;
   max-width: 900px;
@@ -337,7 +337,7 @@ kbd {
   margin: 0 1px;
 }
 
-/* ── Empty states ──────────────────────────────────────────────────────────── */
+/* Empty states */
 .empty-state {
   background: var(--surface);
   border: 1.5px dashed var(--border-strong);
@@ -369,7 +369,7 @@ kbd {
   margin-bottom: 0.75rem;
 }
 
-/* ── Link button ───────────────────────────────────────────────────────────── */
+/* Link button */
 .link-btn {
   background: none;
   border: none;
@@ -383,7 +383,7 @@ kbd {
 
 .link-btn:hover { color: var(--primary-hover); }
 
-/* ── Cards ─────────────────────────────────────────────────────────────────── */
+/* Cards */
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -444,7 +444,7 @@ input[type="text"]:focus, input[type="number"]:focus {
 
 input::placeholder { color: #94a3b8; }
 
-/* ── Buttons ───────────────────────────────────────────────────────────────── */
+/* Buttons */
 .btn-primary {
   background: linear-gradient(135deg, var(--primary) 0%, #7c3aed 100%);
   color: white;
@@ -507,7 +507,7 @@ input::placeholder { color: #94a3b8; }
 
 .btn-secondary:active { transform: translateY(0); }
 
-/* ── Status / placeholder ──────────────────────────────────────────────────── */
+/* Status / placeholder */
 .status-msg {
   font-size: 0.88rem;
   color: var(--muted);
@@ -528,7 +528,7 @@ input::placeholder { color: #94a3b8; }
   border-radius: var(--radius);
 }
 
-/* ── Upload area ───────────────────────────────────────────────────────────── */
+/* Upload area */
 .upload-area {
   border: 1.5px dashed var(--border-strong);
   border-radius: var(--radius);
@@ -605,7 +605,7 @@ input::placeholder { color: #94a3b8; }
 
 .file-chip button:hover { opacity: 1; }
 
-/* ── Toast ─────────────────────────────────────────────────────────────────── */
+/* Toast */
 .toast {
   position: fixed;
   bottom: 24px;
@@ -629,7 +629,7 @@ input::placeholder { color: #94a3b8; }
 .toast.error { background: var(--danger); }
 .toast.success { background: var(--accent); }
 
-/* ── Notes ─────────────────────────────────────────────────────────────────── */
+/* Notes */
 .notes-summary {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -750,7 +750,7 @@ input::placeholder { color: #94a3b8; }
   color: white;
 }
 
-/* ── Flashcards ────────────────────────────────────────────────────────────── */
+/* Flashcards */
 .flashcard-wrapper {
   perspective: 1600px;
   width: 100%;
@@ -861,7 +861,7 @@ input::placeholder { color: #94a3b8; }
   font-variant-numeric: tabular-nums;
 }
 
-/* ── Quiz ──────────────────────────────────────────────────────────────────── */
+/* Quiz */
 .quiz-question {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -960,7 +960,7 @@ input::placeholder { color: #94a3b8; }
 
 .quiz-result-item .weak-tag { background: #fef3c7; color: #92400e; border-color: #fde68a; }
 
-/* ── Study Plan ────────────────────────────────────────────────────────────── */
+/* Study Plan */
 .plan-day {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -1158,7 +1158,7 @@ input::placeholder { color: #94a3b8; }
   padding: 0.75rem 1rem;
 }
 
-/* ── Spinner ───────────────────────────────────────────────────────────────── */
+/* Spinner */
 .spinner {
   display: inline-block;
   width: 14px; height: 14px;
@@ -1172,7 +1172,7 @@ input::placeholder { color: #94a3b8; }
 
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* ── Auth overlay ──────────────────────────────────────────────────────────── */
+/* Auth overlay */
 .auth-overlay {
   position: fixed; inset: 0; z-index: 100;
   background: rgba(15, 23, 42, 0.45);
@@ -1208,7 +1208,7 @@ input::placeholder { color: #94a3b8; }
   font-size: 0.82rem; font-weight: 500;
 }
 
-/* ── History sidebar ───────────────────────────────────────────────────────── */
+/* History sidebar */
 .history-sidebar {
   position: fixed; top: 0; right: 0; bottom: 0;
   width: 340px; max-width: 90vw;
@@ -1254,10 +1254,10 @@ input::placeholder { color: #94a3b8; }
 }
 .history-backdrop.show { opacity: 1; pointer-events: auto; }
 
-/* ── Scrollbars (subtle) ───────────────────────────────────────────────────── */
+/* Scrollbars (subtle) */
 .tabs::-webkit-scrollbar { height: 0; }
 
-/* ── Responsive ────────────────────────────────────────────────────────────── */
+/* Responsive */
 @media (max-width: 640px) {
   header { padding: 1rem 1.25rem; }
   header h1 { font-size: 1.15rem; }

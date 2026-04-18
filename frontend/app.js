@@ -9,13 +9,19 @@ let quizQuestions = [];
 let shopState = null;
 let studyTickTimer = null;
 let lastStudyTickMs = null;
+let studyTickInFlight = false;
+let pendingPurchaseUpgradeId = null;
+
+const STUDY_TICK_INTERVAL_MS = 60_000;
+const MIN_STUDY_TICK_SECONDS = 30;
+const MAX_STUDY_TICK_SECONDS = 300;
 
 const state = {
   notes: false,
   learning: false,
 };
 
-// ── Auth ─────────────────────────────────────────────────────────────────────
+// Auth
 
 function showAuth() {
   document.getElementById('auth-overlay').style.display = 'flex';
@@ -103,7 +109,7 @@ document.getElementById('auth-email')?.addEventListener('keydown', e => {
   if (e.key === 'Enter') { e.preventDefault(); document.getElementById('auth-password').focus(); }
 });
 
-// ── History sidebar ──────────────────────────────────────────────────────────
+// History sidebar
 
 async function loadSessionList() {
   try {
@@ -122,7 +128,7 @@ function renderSessionList(sessions) {
   }
   list.innerHTML = sessions.map(s => `
     <div class="history-item ${s.session_id === sessionId ? 'active' : ''}" data-id="${escHtml(s.session_id)}">
-      <button type="button" class="delete-btn" title="Delete" onclick="deleteSessionConfirm(event, '${escHtml(s.session_id)}')">×</button>
+      <button type="button" class="delete-btn" title="Delete" onclick="deleteSessionConfirm(event, '${escHtml(s.session_id)}')">&times;</button>
       <span class="topic">${escHtml(s.topic || 'Untitled')}</span>
       <span class="meta">${formatDate(s.updated_at)}</span>
     </div>
@@ -195,7 +201,7 @@ async function deleteSessionConfirm(e, id) {
   }
 }
 
-// ── Session ──────────────────────────────────────────────────────────────────
+// Session
 
 function setSession(id) {
   sessionId = id;
@@ -215,7 +221,7 @@ function resetSession() {
   location.reload();
 }
 
-// ── Tab switching & locking ──────────────────────────────────────────────────
+// Tab switching & locking
 
 function isTabUnlocked(btn) {
   const req = btn.dataset.requires;
@@ -261,7 +267,7 @@ function switchTab(name) {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// ── File upload ───────────────────────────────────────────────────────────────
+// File upload
 
 const pendingFiles = [];
 
@@ -277,7 +283,7 @@ function renderFileList() {
   list.innerHTML = pendingFiles.map((f, i) => `
     <span class="file-chip">
       ${escHtml(f.name)}
-      <button type="button" onclick="removeFile(${i})" title="Remove" aria-label="Remove ${escHtml(f.name)}">×</button>
+      <button type="button" onclick="removeFile(${i})" title="Remove" aria-label="Remove ${escHtml(f.name)}">&times;</button>
     </span>
   `).join('');
 }
@@ -312,13 +318,13 @@ if (uploadArea) {
     for (const f of e.dataTransfer.files) {
       const ok = allowed.some(ext => f.name.toLowerCase().endsWith(ext));
       if (ok) pendingFiles.push(f);
-      else toast(`Skipped "${f.name}" — unsupported type.`, 'error');
+      else toast(`Skipped "${f.name}" - unsupported type.`, 'error');
     }
     renderFileList();
   });
 }
 
-// ── Research ──────────────────────────────────────────────────────────────────
+// Research
 
 async function startResearch() {
   const topic = document.getElementById('topic-input').value.trim();
@@ -381,14 +387,14 @@ document.getElementById('topic-input')?.addEventListener('keydown', e => {
   if (e.key === 'Enter') { e.preventDefault(); startResearch(); }
 });
 
-// ── Notes ─────────────────────────────────────────────────────────────────────
+// Notes
 
 function renderNotes(notes, topic) {
   const container = document.getElementById('notes-content');
   const genBtn = document.getElementById('generate-learning-btn');
 
   let html = `<div class="notes-summary">
-    <h3>Summary — ${escHtml(topic)}</h3>
+    <h3>Summary - ${escHtml(topic)}</h3>
     <p>${escHtml(notes.summary || '')}</p>
   </div>`;
 
@@ -418,10 +424,10 @@ function toggleAccordion(i) {
   const body = document.getElementById('acc-' + i);
   const header = body.previousElementSibling;
   const isOpen = body.classList.toggle('open');
-  header.querySelector('span').textContent = isOpen ? '−' : '+';
+  header.querySelector('span').textContent = isOpen ? '-' : '+';
 }
 
-// ── Flashcards & Quiz generation ─────────────────────────────────────────────
+// Flashcards & Quiz generation
 
 async function generateLearning() {
   const btn = document.getElementById('generate-learning-btn');
@@ -472,7 +478,7 @@ async function generateLearning() {
   }
 }
 
-// ── Flashcards ────────────────────────────────────────────────────────────────
+// Flashcards
 
 function renderFlashcards() {
   if (!flashcards.length) return;
@@ -526,7 +532,7 @@ document.addEventListener('keydown', e => {
   }
 });
 
-// ── Quiz ──────────────────────────────────────────────────────────────────────
+// Quiz
 
 function renderQuiz() {
   if (!quizQuestions.length) return;
@@ -598,7 +604,7 @@ function renderQuizResults(res) {
     html += `<div class="quiz-result-item ${r.is_correct ? 'correct' : 'wrong'}">
       <strong>${escHtml(r.question)}</strong><br/>
       Your answer: <strong>${escHtml(r.selected)}</strong>
-      ${!r.is_correct ? ` — Correct: <strong>${escHtml(r.correct_answer)}</strong>` : ' ✓'}
+      ${!r.is_correct ? ` - Correct: <strong>${escHtml(r.correct_answer)}</strong>` : ' &#10003;'}
       <br/><em>${escHtml(r.explanation)}</em>
     </div>`;
   });
@@ -607,7 +613,7 @@ function renderQuizResults(res) {
   document.getElementById('quiz-results').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-// ── Study Plan ────────────────────────────────────────────────────────────────
+// Study Plan
 
 async function generatePlan() {
   const days = parseInt(document.getElementById('days-input').value) || 7;
@@ -639,7 +645,7 @@ function renderPlan(plan) {
   let html = '';
   plan.forEach(day => {
     html += `<div class="plan-day">
-      <div class="plan-day-header">Day ${day.day}${day.focus ? ' — ' + escHtml(day.focus) : ''}</div>`;
+      <div class="plan-day-header">Day ${day.day}${day.focus ? ' - ' + escHtml(day.focus) : ''}</div>`;
     (day.tasks || []).forEach(task => {
       const priority = (task.priority || 'medium').toLowerCase();
       html += `<div class="plan-task">
@@ -662,12 +668,16 @@ function renderPlan(plan) {
 async function loadShopState() {
   if (!authToken) return;
   try {
-    shopState = await apiJson('/api/shop/state', { method: 'GET' });
-    renderCoinBadge();
-    renderShop();
+    setShopState(await apiJson('/api/shop/state', { method: 'GET' }));
   } catch (err) {
     console.warn('Could not load shop state:', err.message);
   }
+}
+
+function setShopState(nextState) {
+  shopState = nextState;
+  renderCoinBadge();
+  renderShop();
 }
 
 function renderCoinBadge() {
@@ -693,8 +703,9 @@ function renderShop() {
 
   grid.innerHTML = (shopState.upgrades || []).map(upgrade => {
     const pct = Math.round((upgrade.level / upgrade.max_level) * 100);
-    const buttonText = upgrade.maxed ? 'Maxed' : `${upgrade.next_cost} coins`;
-    const disabled = upgrade.maxed || !upgrade.affordable;
+    const isBuying = pendingPurchaseUpgradeId === upgrade.id;
+    const buttonText = isBuying ? 'Buying...' : upgrade.maxed ? 'Maxed' : `${upgrade.next_cost} coins`;
+    const disabled = isBuying || upgrade.maxed || !upgrade.affordable;
     return `<article class="shop-card ${upgrade.maxed ? 'maxed' : ''}">
       <div class="shop-card-head">
         <div>
@@ -705,56 +716,66 @@ function renderShop() {
       </div>
       <p>${escHtml(upgrade.description)}</p>
       <div class="shop-progress" aria-hidden="true"><span style="width:${pct}%"></span></div>
-      <button class="btn-primary shop-buy-btn" type="button" onclick="buyUpgrade('${escHtml(upgrade.id)}')" ${disabled ? 'disabled' : ''}>
+      <button class="btn-primary shop-buy-btn" type="button" data-upgrade-id="${escHtml(upgrade.id)}" ${disabled ? 'disabled' : ''}>
         ${escHtml(buttonText)}
       </button>
     </article>`;
   }).join('');
+
+  grid.querySelectorAll('.shop-buy-btn').forEach(btn => {
+    btn.addEventListener('click', () => buyUpgrade(btn.dataset.upgradeId));
+  });
 }
 
 async function buyUpgrade(upgradeId) {
+  if (!upgradeId || pendingPurchaseUpgradeId) return;
+  pendingPurchaseUpgradeId = upgradeId;
+  renderShop();
+
   try {
     const res = await apiJson('/api/shop/purchase', {
       method: 'POST',
       body: JSON.stringify({ upgrade_id: upgradeId }),
     });
-    shopState = res.state;
-    renderCoinBadge();
-    renderShop();
+    setShopState(res.state);
     toast(`Upgrade purchased. Level ${res.level}.`, 'success');
   } catch (err) {
     toast(err.message, 'error');
+  } finally {
+    pendingPurchaseUpgradeId = null;
+    renderShop();
   }
 }
 
 function startStudyTicker() {
   clearInterval(studyTickTimer);
   lastStudyTickMs = Date.now();
-  studyTickTimer = setInterval(recordStudyTick, 60000);
+  studyTickTimer = setInterval(recordStudyTick, STUDY_TICK_INTERVAL_MS);
 }
 
 async function recordStudyTick() {
-  if (!authToken) return;
+  if (!authToken || studyTickInFlight) return;
   if (document.hidden) {
     lastStudyTickMs = Date.now();
     return;
   }
 
   const now = Date.now();
-  const elapsed = Math.min(300, Math.floor((now - (lastStudyTickMs || now)) / 1000));
-  if (elapsed < 30) return;
+  const elapsed = Math.min(MAX_STUDY_TICK_SECONDS, Math.floor((now - (lastStudyTickMs || now)) / 1000));
+  if (elapsed < MIN_STUDY_TICK_SECONDS) return;
   lastStudyTickMs = now;
+  studyTickInFlight = true;
 
   try {
     const res = await apiJson('/api/shop/study-tick', {
       method: 'POST',
       body: JSON.stringify({ elapsed_seconds: elapsed }),
     });
-    shopState = res.state;
-    renderCoinBadge();
-    renderShop();
+    setShopState(res.state);
   } catch (err) {
     console.warn('Study coin tick failed:', err.message);
+  } finally {
+    studyTickInFlight = false;
   }
 }
 
@@ -774,7 +795,7 @@ function coinSuffix(amount) {
   return amount ? ` +${amount} coins` : '';
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// Helpers
 
 function setStatus(el, msg, isError = false) {
   el.innerHTML = msg ? `<span class="spinner"></span>${escHtml(msg)}` : '';
@@ -806,7 +827,7 @@ async function apiJson(path, options = {}) {
     currentUser = null;
     localStorage.removeItem('auth_token');
     showAuth();
-    throw new Error('Session expired — please sign in again.');
+    throw new Error('Session expired - please sign in again.');
   }
 
   if (!response.ok) {
@@ -850,7 +871,7 @@ function escHtml(str) {
     .replace(/"/g, '&quot;');
 }
 
-// ── Init ──────────────────────────────────────────────────────────────────────
+// Init
 
 async function bootstrap() {
   if (!authToken) {
