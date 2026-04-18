@@ -420,13 +420,28 @@ function toggleAccordion(i) {
 async function generateLearning() {
   const btn = document.getElementById('generate-learning-btn');
   const status = document.getElementById('learning-status');
+  const flashcardsInput = document.getElementById('flashcards-count');
+  const quizInput = document.getElementById('quiz-count');
+
+  let numFlashcards = parseInt(flashcardsInput.value, 10);
+  let numQuestions = parseInt(quizInput.value, 10);
+
+  if (Number.isNaN(numFlashcards) || numFlashcards < 1) numFlashcards = 10;
+  if (Number.isNaN(numQuestions) || numQuestions < 1) numQuestions = 5;
+  numFlashcards = Math.min(Math.max(numFlashcards, 1), 30);
+  numQuestions = Math.min(Math.max(numQuestions, 1), 20);
+
   btn.disabled = true;
   setStatus(status, 'Generating flashcards and quiz...');
 
   try {
     const res = await apiJson('/api/study/generate-learning', {
       method: 'POST',
-      body: JSON.stringify({ session_id: sessionId, num_flashcards: 10, num_questions: 5 }),
+      body: JSON.stringify({
+        session_id: sessionId,
+        num_flashcards: numFlashcards,
+        num_questions: numQuestions,
+      }),
     });
 
     flashcards = res.flashcards || [];

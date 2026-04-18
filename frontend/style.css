@@ -291,6 +291,10 @@ header h1::before {
 .field-row { display: flex; gap: 1rem; flex-wrap: wrap; }
 .field-row .field { flex: 1; min-width: 140px; }
 
+.field-row.learning-settings { margin-bottom: 1.25rem; }
+
+#generate-learning-btn { margin-top: 0.75rem; }
+
 .field-hint { font-size: 0.78rem; color: var(--muted); }
 .optional { color: var(--muted); font-weight: 400; text-transform: none; letter-spacing: 0; font-size: 0.78rem; }
 

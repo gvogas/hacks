@@ -128,6 +128,16 @@
         <button class="btn-secondary" onclick="switchTab('research')">Go to Research</button>
       </div>
     </div>
+    <div class="field-row learning-settings">
+      <div class="field">
+        <label for="flashcards-count">Flashcards</label>
+        <input id="flashcards-count" type="number" value="10" min="1" max="30" />
+      </div>
+      <div class="field">
+        <label for="quiz-count">Quiz questions</label>
+        <input id="quiz-count" type="number" value="5" min="1" max="20" />
+      </div>
+    </div>
     <div class="actions">
       <button class="btn-primary" id="generate-learning-btn" style="display:none" onclick="generateLearning()">
         Generate Flashcards &amp; Quiz
