@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip install *)",
+      "Bash(python -c \"from main import app; print\\('OK', [r.path for r in app.routes if hasattr\\(r, 'path'\\) and r.path.startswith\\('/api/auth'\\)]\\)\")",
+      "Bash(py -c \"from main import app; print\\('OK', [r.path for r in app.routes if hasattr\\(r, 'path'\\) and r.path.startswith\\('/api/auth'\\)]\\)\")",
+      "Bash(py -c ' *)",
+      "Bash(rm -f app.db)"
+    ]
+  }
+}

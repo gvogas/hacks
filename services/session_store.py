@@ -1,15 +1,14 @@
-import uuid
 import json
-import os
+import uuid
 from datetime import datetime
 
-_sessions: dict = {}
-_PERSIST_FILE = "sessions.json"
+from fastapi import HTTPException
+
+from services import db
 
 
-def create_session() -> str:
-    session_id = str(uuid.uuid4())
-    _sessions[session_id] = {
+def _empty_data() -> dict:
+    return {
         "topic": None,
         "notes": None,
         "uploaded_texts": [],
@@ -17,44 +16,84 @@ def create_session() -> str:
         "quiz_questions": [],
         "quiz_history": [],
         "study_plan": None,
-        "created_at": datetime.utcnow().isoformat(),
     }
-    _persist()
+
+
+def create_session(user_id: int) -> str:
+    session_id = str(uuid.uuid4())
+    now = datetime.utcnow().isoformat()
+    db.execute(
+        "INSERT INTO sessions (id, user_id, topic, data, created_at, updated_at) "
+        "VALUES (?, ?, ?, ?, ?, ?)",
+        (session_id, user_id, None, json.dumps(_empty_data()), now, now),
+    )
     return session_id
 
 
-def get_session(session_id: str) -> dict | None:
-    return _sessions.get(session_id)
+def get_session(session_id: str, user_id: int) -> dict | None:
+    row = db.query_one(
+        "SELECT data FROM sessions WHERE id = ? AND user_id = ?",
+        (session_id, user_id),
+    )
+    if not row:
+        return None
+    data = json.loads(row["data"])
+    base = _empty_data()
+    base.update(data)
+    return base
 
 
-def update_session(session_id: str, data: dict):
-    if session_id not in _sessions:
+def update_session(session_id: str, user_id: int, updates: dict):
+    current = get_session(session_id, user_id)
+    if current is None:
         return
-    _sessions[session_id].update(data)
-    _persist()
+    current.update(updates)
+    topic = current.get("topic")
+    db.execute(
+        "UPDATE sessions SET data = ?, topic = ?, updated_at = ? "
+        "WHERE id = ? AND user_id = ?",
+        (json.dumps(current), topic, datetime.utcnow().isoformat(), session_id, user_id),
+    )
 
 
-def ensure_session(session_id: str | None) -> str:
-    if session_id and session_id in _sessions:
-        return session_id
-    return create_session()
+def ensure_session(session_id: str | None, user_id: int) -> str:
+    if session_id:
+        row = db.query_one(
+            "SELECT id FROM sessions WHERE id = ? AND user_id = ?",
+            (session_id, user_id),
+        )
+        if row:
+            return session_id
+    return create_session(user_id)
 
 
-def _persist():
-    try:
-        with open(_PERSIST_FILE, "w") as f:
-            json.dump(_sessions, f)
-    except Exception:
-        pass
+def require_session(session_id: str, user_id: int) -> dict:
+    session = get_session(session_id, user_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return session
 
 
-def _load():
-    if os.path.exists(_PERSIST_FILE):
-        try:
-            with open(_PERSIST_FILE) as f:
-                _sessions.update(json.load(f))
-        except Exception:
-            pass
+def list_sessions(user_id: int) -> list[dict]:
+    rows = db.query_all(
+        "SELECT id, topic, created_at, updated_at FROM sessions "
+        "WHERE user_id = ? ORDER BY updated_at DESC",
+        (user_id,),
+    )
+    return [
+        {
+            "session_id": r["id"],
+            "topic": r["topic"],
+            "created_at": r["created_at"],
+            "updated_at": r["updated_at"],
+        }
+        for r in rows
+    ]
 
 
-_load()
+def delete_session(session_id: str, user_id: int) -> bool:
+    cur = db.execute(
+        "DELETE FROM sessions WHERE id = ? AND user_id = ?",
+        (session_id, user_id),
+    )
+    return cur.rowcount > 0

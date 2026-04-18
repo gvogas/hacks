@@ -10,6 +10,32 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <!-- Auth gate (login / signup) -->
+  <div id="auth-overlay" class="auth-overlay" style="display:none">
+    <div class="auth-card">
+      <h2 id="auth-title">Sign in</h2>
+      <p class="auth-sub">Your topics, notes, quizzes and plans are saved to your account.</p>
+      <div class="field">
+        <label for="auth-email">Email</label>
+        <input id="auth-email" type="email" autocomplete="email" />
+      </div>
+      <div class="field">
+        <label for="auth-password">Password</label>
+        <input id="auth-password" type="password" autocomplete="current-password" />
+      </div>
+      <div class="actions">
+        <button class="btn-primary" id="auth-submit" type="button" onclick="submitAuth()">Sign in</button>
+      </div>
+      <div id="auth-status" class="status-msg"></div>
+      <p class="auth-toggle">
+        <span id="auth-toggle-text">No account?</span>
+        <button type="button" class="link-btn" onclick="toggleAuthMode()" id="auth-toggle-btn">Create one</button>
+      </p>
+    </div>
+  </div>
+
+  <div id="app-shell" style="display:none">
+
   <div id="progress-bar" class="progress-bar"></div>
   <header>
     <div class="header-left">
@@ -17,10 +43,23 @@
       <p class="header-subtitle">Pick a topic → we generate notes, flashcards, a quiz, and a study plan.</p>
     </div>
     <div class="header-right">
+      <span id="user-badge"></span>
       <span id="session-badge"></span>
+      <button id="history-btn" class="header-btn" type="button" onclick="toggleHistory()" title="View past sessions">History</button>
       <button id="reset-btn" class="header-btn" type="button" onclick="resetSession()" title="Start a new session">New session</button>
+      <button id="logout-btn" class="header-btn" type="button" onclick="logout()" title="Log out">Log out</button>
     </div>
   </header>
+
+  <!-- History sidebar -->
+  <aside id="history-sidebar" class="history-sidebar" aria-hidden="true">
+    <div class="history-header">
+      <h3>Your sessions</h3>
+      <button class="link-btn" onclick="toggleHistory()">Close</button>
+    </div>
+    <div id="history-list" class="history-list"></div>
+  </aside>
+  <div id="history-backdrop" class="history-backdrop" onclick="toggleHistory()"></div>
 
   <nav class="tabs" role="tablist">
     <button class="tab-btn active" data-tab="research" data-step="1">
@@ -158,6 +197,8 @@
   </section>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  </div> <!-- /app-shell -->
 
   <script src="app.js"></script>
 </body>

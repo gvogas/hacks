@@ -3,7 +3,7 @@ from models.schemas import StudyStartRequest, GenerateLearningRequest
 from agents.research_agent import ResearchAgent
 from agents.content_agent import ContentAgent
 from agents.learning_agent import LearningAgent
-from services import session_store
+from services import session_store, auth
 from services.exceptions import ExternalServiceError
 
 router = APIRouter()
@@ -13,8 +13,8 @@ learning_agent = LearningAgent()
 
 
 @router.post("/start")
-async def study_start(req: StudyStartRequest):
-    session_id = session_store.ensure_session(req.session_id)
+async def study_start(req: StudyStartRequest, user: dict = auth.CurrentUser):
+    session_id = session_store.ensure_session(req.session_id, user["id"])
 
     warnings = []
     try:
@@ -23,7 +23,7 @@ async def study_start(req: StudyStartRequest):
         search_results = []
         warnings.append(str(exc))
 
-    session = session_store.get_session(session_id)
+    session = session_store.require_session(session_id, user["id"])
     uploaded_texts = session.get("uploaded_texts", [])
 
     try:
@@ -31,15 +31,13 @@ async def study_start(req: StudyStartRequest):
     except ExternalServiceError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
 
-    session_store.update_session(session_id, {"topic": req.topic, "notes": notes})
+    session_store.update_session(session_id, user["id"], {"topic": req.topic, "notes": notes})
     return {"session_id": session_id, "notes": notes, "warnings": warnings}
 
 
 @router.post("/generate-learning")
-async def generate_learning(req: GenerateLearningRequest):
-    session = session_store.get_session(req.session_id)
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
+async def generate_learning(req: GenerateLearningRequest, user: dict = auth.CurrentUser):
+    session = session_store.require_session(req.session_id, user["id"])
     if not session.get("notes"):
         raise HTTPException(status_code=400, detail="No notes found. Run /study/start first.")
 
@@ -52,16 +50,27 @@ async def generate_learning(req: GenerateLearningRequest):
     except ExternalServiceError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
 
-    session_store.update_session(req.session_id, {
+    session_store.update_session(req.session_id, user["id"], {
         "flashcards": result.get("flashcards", []),
         "quiz_questions": result.get("quiz_questions", []),
     })
     return {"session_id": req.session_id, **result}
 
 
+@router.get("/sessions")
+async def list_user_sessions(user: dict = auth.CurrentUser):
+    return {"sessions": session_store.list_sessions(user["id"])}
+
+
 @router.get("/session/{session_id}")
-async def get_session(session_id: str):
-    session = session_store.get_session(session_id)
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
+async def get_session(session_id: str, user: dict = auth.CurrentUser):
+    session = session_store.require_session(session_id, user["id"])
     return {"session_id": session_id, **session}
+
+
+@router.delete("/session/{session_id}")
+async def delete_session(session_id: str, user: dict = auth.CurrentUser):
+    deleted = session_store.delete_session(session_id, user["id"])
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Session not found")
+    return {"deleted": session_id}

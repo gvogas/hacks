@@ -6,3 +6,11 @@ __pycache__/
 .venv/
 venv/
 sessions.json
+.jwt_secret
+app.db
+app.db-journal
+app.db-wal
+app.db-shm
+.DS_Store
+.idea/
+.vscode/

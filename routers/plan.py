@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from models.schemas import PlanGenerateRequest
 from agents.planning_agent import PlanningAgent
-from services import session_store
+from services import session_store, auth
 from services.exceptions import ExternalServiceError
 
 router = APIRouter()
@@ -9,10 +9,8 @@ planning_agent = PlanningAgent()
 
 
 @router.post("/generate")
-async def generate_plan(req: PlanGenerateRequest):
-    session = session_store.get_session(req.session_id)
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
+async def generate_plan(req: PlanGenerateRequest, user: dict = auth.CurrentUser):
+    session = session_store.require_session(req.session_id, user["id"])
     if not session.get("notes"):
         raise HTTPException(status_code=400, detail="No notes found. Run /study/start first.")
 
@@ -31,5 +29,5 @@ async def generate_plan(req: PlanGenerateRequest):
     except ExternalServiceError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
 
-    session_store.update_session(req.session_id, {"study_plan": plan})
+    session_store.update_session(req.session_id, user["id"], {"study_plan": plan})
     return {"session_id": req.session_id, **plan}

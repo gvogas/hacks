@@ -1,16 +1,14 @@
 from fastapi import APIRouter, HTTPException
 from datetime import datetime
 from models.schemas import QuizSubmitRequest
-from services import session_store
+from services import session_store, auth
 
 router = APIRouter()
 
 
 @router.post("/submit")
-async def submit_quiz(req: QuizSubmitRequest):
-    session = session_store.get_session(req.session_id)
-    if not session:
-        raise HTTPException(status_code=404, detail="Session not found")
+async def submit_quiz(req: QuizSubmitRequest, user: dict = auth.CurrentUser):
+    session = session_store.require_session(req.session_id, user["id"])
 
     questions = session.get("quiz_questions", [])
     if not questions:
@@ -54,7 +52,7 @@ async def submit_quiz(req: QuizSubmitRequest):
 
     existing_history = session.get("quiz_history", [])
     existing_history.append(history_entry)
-    session_store.update_session(req.session_id, {"quiz_history": existing_history})
+    session_store.update_session(req.session_id, user["id"], {"quiz_history": existing_history})
 
     return {
         "session_id": req.session_id,

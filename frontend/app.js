@@ -1,5 +1,8 @@
 const API = '';
 let sessionId = localStorage.getItem('study_session_id') || null;
+let authToken = localStorage.getItem('auth_token') || null;
+let currentUser = null;
+let authMode = 'login'; // 'login' | 'signup'
 let flashcards = [];
 let cardIndex = 0;
 let quizQuestions = [];
@@ -8,6 +11,192 @@ const state = {
   notes: false,
   learning: false,
 };
+
+// ── Auth ─────────────────────────────────────────────────────────────────────
+
+function showAuth() {
+  document.getElementById('auth-overlay').style.display = 'flex';
+  document.getElementById('app-shell').style.display = 'none';
+  setTimeout(() => document.getElementById('auth-email')?.focus(), 50);
+}
+
+function showApp() {
+  document.getElementById('auth-overlay').style.display = 'none';
+  document.getElementById('app-shell').style.display = 'block';
+  if (currentUser) {
+    document.getElementById('user-badge').textContent = currentUser.email;
+  }
+  if (sessionId) {
+    document.getElementById('session-badge').textContent = 'session: ' + sessionId.slice(0, 8);
+  }
+}
+
+function toggleAuthMode() {
+  authMode = authMode === 'login' ? 'signup' : 'login';
+  const isLogin = authMode === 'login';
+  document.getElementById('auth-title').textContent = isLogin ? 'Sign in' : 'Create account';
+  document.getElementById('auth-submit').textContent = isLogin ? 'Sign in' : 'Sign up';
+  document.getElementById('auth-toggle-text').textContent = isLogin ? 'No account?' : 'Already have an account?';
+  document.getElementById('auth-toggle-btn').textContent = isLogin ? 'Create one' : 'Sign in';
+  document.getElementById('auth-status').textContent = '';
+  const pwd = document.getElementById('auth-password');
+  pwd.setAttribute('autocomplete', isLogin ? 'current-password' : 'new-password');
+}
+
+async function submitAuth() {
+  const email = document.getElementById('auth-email').value.trim();
+  const password = document.getElementById('auth-password').value;
+  const status = document.getElementById('auth-status');
+  const btn = document.getElementById('auth-submit');
+
+  if (!email || !password) {
+    setStatus(status, 'Email and password are required.', true);
+    return;
+  }
+  if (authMode === 'signup' && password.length < 6) {
+    setStatus(status, 'Password must be at least 6 characters.', true);
+    return;
+  }
+
+  btn.disabled = true;
+  setStatus(status, authMode === 'login' ? 'Signing in...' : 'Creating account...');
+
+  try {
+    const path = authMode === 'login' ? '/api/auth/login' : '/api/auth/signup';
+    const res = await apiJson(path, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+    authToken = res.token;
+    currentUser = res.user;
+    localStorage.setItem('auth_token', authToken);
+    localStorage.removeItem('study_session_id');
+    sessionId = null;
+    setStatus(status, '');
+    showApp();
+    await loadSessionList();
+    toast(authMode === 'login' ? 'Welcome back!' : 'Account created.', 'success');
+  } catch (err) {
+    setStatus(status, err.message, true);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function logout() {
+  if (!confirm('Log out? Your sessions stay saved on the server.')) return;
+  authToken = null;
+  currentUser = null;
+  sessionId = null;
+  localStorage.removeItem('auth_token');
+  localStorage.removeItem('study_session_id');
+  location.reload();
+}
+
+document.getElementById('auth-password')?.addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); submitAuth(); }
+});
+document.getElementById('auth-email')?.addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); document.getElementById('auth-password').focus(); }
+});
+
+// ── History sidebar ──────────────────────────────────────────────────────────
+
+async function loadSessionList() {
+  try {
+    const res = await apiJson('/api/study/sessions', { method: 'GET' });
+    renderSessionList(res.sessions || []);
+  } catch (err) {
+    console.warn('Could not load session list:', err.message);
+  }
+}
+
+function renderSessionList(sessions) {
+  const list = document.getElementById('history-list');
+  if (!sessions.length) {
+    list.innerHTML = '<div class="history-empty">No saved sessions yet.<br/>Start a topic to get going.</div>';
+    return;
+  }
+  list.innerHTML = sessions.map(s => `
+    <div class="history-item ${s.session_id === sessionId ? 'active' : ''}" data-id="${escHtml(s.session_id)}">
+      <button type="button" class="delete-btn" title="Delete" onclick="deleteSessionConfirm(event, '${escHtml(s.session_id)}')">×</button>
+      <span class="topic">${escHtml(s.topic || 'Untitled')}</span>
+      <span class="meta">${formatDate(s.updated_at)}</span>
+    </div>
+  `).join('');
+  list.querySelectorAll('.history-item').forEach(el => {
+    el.addEventListener('click', e => {
+      if (e.target.closest('.delete-btn')) return;
+      loadSession(el.dataset.id);
+    });
+  });
+}
+
+function formatDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso + 'Z');
+  if (isNaN(d.getTime())) return iso;
+  return d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+}
+
+function toggleHistory() {
+  const sidebar = document.getElementById('history-sidebar');
+  const backdrop = document.getElementById('history-backdrop');
+  const open = sidebar.classList.toggle('open');
+  backdrop.classList.toggle('show', open);
+  sidebar.setAttribute('aria-hidden', String(!open));
+  if (open) loadSessionList();
+}
+
+async function loadSession(id) {
+  try {
+    const s = await apiJson('/api/study/session/' + encodeURIComponent(id), { method: 'GET' });
+    setSession(id);
+
+    flashcards = s.flashcards || [];
+    quizQuestions = s.quiz_questions || [];
+    state.notes = !!s.notes;
+    state.learning = !!(flashcards.length || quizQuestions.length);
+
+    if (s.notes) {
+      renderNotes(s.notes, s.topic || '');
+    } else {
+      document.getElementById('notes-content').innerHTML = '';
+    }
+    if (flashcards.length) renderFlashcards();
+    if (quizQuestions.length) renderQuiz();
+
+    if (s.topic) document.getElementById('topic-input').value = s.topic;
+
+    updateTabLocks();
+    if (s.notes) markCompleted('research');
+    if (state.learning) markCompleted('notes');
+    switchTab(s.notes ? 'notes' : 'research');
+    toggleHistory();
+    toast('Session loaded.', 'success');
+    loadSessionList();
+  } catch (err) {
+    toast('Could not load session: ' + err.message, 'error');
+  }
+}
+
+async function deleteSessionConfirm(e, id) {
+  e.stopPropagation();
+  if (!confirm('Delete this session? This cannot be undone.')) return;
+  try {
+    await apiJson('/api/study/session/' + encodeURIComponent(id), { method: 'DELETE' });
+    if (id === sessionId) {
+      localStorage.removeItem('study_session_id');
+      sessionId = null;
+      document.getElementById('session-badge').textContent = '';
+    }
+    loadSessionList();
+    toast('Session deleted.', 'success');
+  } catch (err) {
+    toast('Delete failed: ' + err.message, 'error');
+  }
+}
 
 // ── Session ──────────────────────────────────────────────────────────────────
 
@@ -187,6 +376,7 @@ async function startResearch() {
       toast('Notes ready! Taking you to the Notes tab.', 'success');
     }
     setTimeout(() => switchTab('notes'), 600);
+    loadSessionList();
   } catch (err) {
     setStatus(status, 'Error: ' + err.message, true);
     toast(err.message, 'error');
@@ -467,7 +657,10 @@ function setStatus(el, msg, isError = false) {
 }
 
 async function apiJson(path, options = {}) {
-  const response = await fetch(API + path, options);
+  const opts = { ...options, headers: { ...(options.headers || {}) } };
+  if (authToken) opts.headers['Authorization'] = 'Bearer ' + authToken;
+
+  const response = await fetch(API + path, opts);
   const text = await response.text();
   let data = {};
 
@@ -477,6 +670,14 @@ async function apiJson(path, options = {}) {
     } catch {
       data = { detail: text };
     }
+  }
+
+  if (response.status === 401 && !path.startsWith('/api/auth/')) {
+    authToken = null;
+    currentUser = null;
+    localStorage.removeItem('auth_token');
+    showAuth();
+    throw new Error('Session expired — please sign in again.');
   }
 
   if (!response.ok) {
@@ -522,8 +723,20 @@ function escHtml(str) {
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 
-if (sessionId) {
-  document.getElementById('session-badge').textContent = 'session: ' + sessionId.slice(0, 8);
+async function bootstrap() {
+  if (!authToken) {
+    showAuth();
+    return;
+  }
+  try {
+    const res = await apiJson('/api/auth/me', { method: 'GET' });
+    currentUser = res.user;
+    showApp();
+    updateTabLocks();
+    await loadSessionList();
+  } catch {
+    showAuth();
+  }
 }
 
-updateTabLocks();
+bootstrap();
