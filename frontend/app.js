@@ -138,28 +138,17 @@ function setupSpotifyControls() {
   connectBtn.textContent = 'Connect Spotify';
   connectBtn.addEventListener('click', handleSpotifyConnectButton);
 
-  const playBtn = spotifyControlButton('spotify-play-btn', 'Play', 'Resume Spotify playback', () => spotifyCommand('play'));
-  const pauseBtn = spotifyControlButton('spotify-pause-btn', 'Pause', 'Pause Spotify playback', () => spotifyCommand('pause'));
-  const nextBtn = spotifyControlButton('spotify-next-btn', 'Next', 'Skip to next Spotify track', () => spotifyCommand('next'));
-
-  group.append(connectBtn, playBtn, pauseBtn, nextBtn);
+  group.append(connectBtn);
 
   const logoutBtn = headerRight.querySelector('#logout-btn') || headerRight.querySelector('button[onclick="logout()"]');
   if (logoutBtn) headerRight.insertBefore(group, logoutBtn);
   else headerRight.appendChild(group);
 
-  renderSpotifyControls();
-}
+  document.getElementById('spotify-play-btn')?.addEventListener('click', () => spotifyCommand('play'));
+  document.getElementById('spotify-pause-btn')?.addEventListener('click', () => spotifyCommand('pause'));
+  document.getElementById('spotify-next-btn')?.addEventListener('click', () => spotifyCommand('next'));
 
-function spotifyControlButton(id, text, title, handler) {
-  const btn = document.createElement('button');
-  btn.id = id;
-  btn.className = 'header-btn spotify-playback-btn';
-  btn.type = 'button';
-  btn.title = title;
-  btn.textContent = text;
-  btn.addEventListener('click', handler);
-  return btn;
+  renderSpotifyControls();
 }
 
 async function loadSpotifyStatus() {
@@ -226,7 +215,6 @@ function initSpotifyWebPlayer() {
 
 function renderSpotifyControls() {
   const connectBtn = document.getElementById('spotify-connect-btn');
-  const playbackBtns = document.querySelectorAll('.spotify-playback-btn');
   if (!connectBtn) return;
 
   const connected = !!spotifyState?.connected;
@@ -236,7 +224,10 @@ function renderSpotifyControls() {
     ? `Spotify: ${spotifyState.display_name || 'Connected'}`
     : (spotifyState?.configured === false ? 'Set up Spotify' : 'Connect Spotify');
   connectBtn.title = connected ? 'Disconnect Spotify' : 'Connect Spotify';
-  playbackBtns.forEach(btn => { btn.style.display = connected ? 'inline-flex' : 'none'; });
+
+  const playbackBar = document.getElementById('spotify-playback-bar');
+  if (playbackBar) playbackBar.style.display = connected ? 'flex' : 'none';
+
   renderSpotifyDevices();
   if (!connected) loadSpotifyCurrent();
 }

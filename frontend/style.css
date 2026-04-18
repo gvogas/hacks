@@ -1354,10 +1354,16 @@ input::placeholder { color: #94a3b8; }
   color: white;
 }
 
-.spotify-playback-btn {
-  min-width: 58px;
-  justify-content: center;
-  padding-inline: 10px;
+.spotify-playback-bar {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.85rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--border);
+}
+
+.spotify-playback-bar button {
+  min-width: 72px;
 }
 
 .spotify-panel {
