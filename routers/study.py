@@ -16,19 +16,30 @@ learning_agent = LearningAgent()
 @router.post("/start")
 async def study_start(req: StudyStartRequest, user: dict = auth.CurrentUser):
     session_id = session_store.ensure_session(req.session_id, user["id"])
+    session = session_store.require_session(session_id, user["id"])
+
+    if req.source != "files" and not req.topic:
+        raise HTTPException(status_code=400, detail="Topic is required for web or combined search.")
 
     warnings: list[str] = []
-    try:
-        search_results = await research_agent.run(req.topic)
-    except ExternalServiceError as exc:
-        # Web search is best-effort; fall back to uploaded notes alone.
-        search_results = []
-        warnings.append(str(exc))
+    search_results: list[dict] = []
 
-    session = session_store.require_session(session_id, user["id"])
-    notes = await content_agent.run(req.topic, search_results, session["uploaded_texts"])
+    if req.source in ("web", "both"):
+        try:
+            search_results = await research_agent.run(req.topic or "")
+        except ExternalServiceError as exc:
+            if req.source == "both" and session["uploaded_texts"]:
+                warnings.append(str(exc))
+                search_results = []
+            else:
+                raise HTTPException(status_code=503, detail="Web search failed. Please try again or choose files only.")
 
-    session_store.update_session(session_id, user["id"], {"topic": req.topic, "notes": notes})
+    uploaded_texts = session["uploaded_texts"] if req.source in ("files", "both") else []
+    if req.source == "files" and not uploaded_texts:
+        raise HTTPException(status_code=400, detail="No uploaded files found. Upload files first or choose web search.")
+
+    notes = await content_agent.run(req.topic, search_results, uploaded_texts)
+    session_store.update_session(session_id, user["id"], {"topic": req.topic or session.get("topic", ""), "notes": notes})
     return {"session_id": session_id, "notes": notes, "warnings": warnings}
 
 

@@ -26,7 +26,8 @@ class ContentAgent:
 
         context = context[:MAX_NOTES]
 
-        prompt = f"""You are an expert educator. Using the provided research materials, create comprehensive structured study notes on the topic: "{topic}".
+        topic_label = f' on the topic: "{topic}"' if topic else ''
+        prompt = f"""You are an expert educator. Using the provided research materials, create comprehensive structured study notes{topic_label}.
 
 Return a JSON object with this exact structure:
 {{

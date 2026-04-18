@@ -845,20 +845,23 @@ if (uploadArea) {
 // ── Research ──────────────────────────────────────────────────────────────────
 
 async function startResearch() {
-  const topic = document.getElementById('topic-input').value.trim();
-  if (!topic) {
+  const topicInput = document.getElementById('topic-input');
+  const topic = topicInput.value.trim();
+  const btn = document.getElementById('start-btn');
+  const status = document.getElementById('research-status');
+  const source = document.querySelector('input[name="study-source"]:checked')?.value || 'both';
+
+  if (source !== 'files' && !topic) {
     toast('Please enter a topic first.', 'error');
-    document.getElementById('topic-input').focus();
+    topicInput.focus();
     return;
   }
 
-  const btn = document.getElementById('start-btn');
-  const status = document.getElementById('research-status');
   btn.disabled = true;
-  setStatus(status, pendingFiles.length ? 'Uploading files...' : 'Searching the web...');
+  setStatus(status, pendingFiles.length ? 'Uploading files...' : source === 'files' ? 'Loading from files...' : 'Searching the web...');
 
   try {
-    if (pendingFiles.length) {
+    if (pendingFiles.length && source !== 'web') {
       const form = new FormData();
       form.append('file', pendingFiles[0]);
       if (sessionId) form.append('session_id', sessionId);
@@ -870,16 +873,16 @@ async function startResearch() {
         f2.append('session_id', sessionId);
         await apiJson('/api/upload', { method: 'POST', body: f2 });
       }
-      setStatus(status, 'Searching the web...');
+      setStatus(status, source === 'files' ? 'Loading from files...' : 'Searching the web...');
     }
 
     const res = await apiJson('/api/study/start', {
       method: 'POST',
-      body: JSON.stringify({ topic, session_id: sessionId }),
+      body: JSON.stringify({ topic: source === 'files' ? undefined : topic, session_id: sessionId, source }),
     });
 
     setSession(res.session_id);
-    renderNotes(res.notes, topic);
+    renderNotes(res.notes, topic || 'Uploaded materials');
     state.notes = true;
     markCompleted('research');
     updateTabLocks();
@@ -899,6 +902,29 @@ async function startResearch() {
     btn.disabled = false;
   }
 }
+
+function updateStudySource() {
+  const source = document.querySelector('input[name="study-source"]:checked')?.value || 'both';
+  const topicInput = document.getElementById('topic-input');
+  const uploadArea = document.getElementById('upload-area');
+  const fileInput = document.getElementById('file-input');
+  const browseBtn = uploadArea?.querySelector('.link-btn');
+  if (!topicInput) return;
+
+  topicInput.disabled = source === 'files';
+  topicInput.placeholder = source === 'files'
+    ? 'Using uploaded files only'
+    : 'e.g. Photosynthesis, World War II, Linear Algebra';
+
+  if (uploadArea && fileInput) {
+    const disableUploads = source === 'web';
+    uploadArea.classList.toggle('disabled', disableUploads);
+    fileInput.disabled = disableUploads;
+    if (browseBtn) browseBtn.disabled = disableUploads;
+  }
+}
+
+window.addEventListener('DOMContentLoaded', updateStudySource);
 
 // Enter-to-submit on topic input
 document.getElementById('topic-input')?.addEventListener('keydown', e => {
