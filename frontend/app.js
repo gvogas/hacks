@@ -25,13 +25,13 @@ window.onSpotifyWebPlaybackSDKReady = () => {
 
 // Sprite per level tier — plant appearance tracks the player's level, not just growth stage.
 const LEVEL_SPRITES = {
-  bad:         '/sprites/Cracked1.png',
-  average:     '/sprites/Cracked2.png',
-  good:        '/sprites/MainFlower1.png',
-  excellent:   '/sprites/WhiteFlower.png',
-  amazing:     '/sprites/MainFlower3.png',
-  phenomenal:  '/sprites/Sunflower.png',
-  legendary:   '/sprites/MainFlower4.png',
+  bad:         '/sprites/MainFlower1.png',
+  average:     '/sprites/MainFlower2.png',
+  good:        '/sprites/MainFlower3.png',
+  excellent:   '/sprites/MainFlower4.png',
+  amazing:     '/sprites/Sunflower.png',
+  phenomenal:  '/sprites/WhiteFlower.png',
+  legendary:   '/sprites/CactiBro.png',
 };
 const FALLBACK_SPRITE = '/sprites/Cracked1.png';
 const PLANT_DEAD_SPRITE = '/sprites/Broken.png';
