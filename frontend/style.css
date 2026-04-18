@@ -423,7 +423,7 @@ label {
   letter-spacing: 0.06em;
 }
 
-input[type="text"], input[type="number"] {
+input[type="text"], input[type="number"], select {
   padding: 0.75rem 1rem;
   border: 1.5px solid var(--border);
   border-radius: var(--radius-sm);
@@ -434,9 +434,15 @@ input[type="text"], input[type="number"] {
   background: var(--surface-2);
   font-family: inherit;
   color: var(--text);
+  appearance: none; /* Remove default browser styling */
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 1rem;
+  padding-right: 2.5rem; /* Make room for the custom arrow */
 }
 
-input[type="text"]:focus, input[type="number"]:focus {
+input[type="text"]:focus, input[type="number"]:focus, select:focus {
   border-color: var(--primary);
   box-shadow: var(--ring);
   background: var(--surface);

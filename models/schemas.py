@@ -26,6 +26,7 @@ class GenerateLearningRequest(BaseModel):
     session_id: SessionId
     num_flashcards: int = Field(default=10, ge=1, le=30)
     num_questions: int = Field(default=5, ge=1, le=20)
+    difficulty: str = Field(default="intermediate", pattern=r"^(beginner|intermediate|advanced)$")
 
 
 class QuizAnswer(BaseModel):

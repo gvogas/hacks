@@ -78,7 +78,7 @@ def stub_agents(monkeypatch):
             "sections": [{"title": "Intro", "content": "body"}],
         }
 
-    async def fake_learning(_notes, num_flashcards=10, num_questions=5):
+    async def fake_learning(_notes, num_flashcards=10, num_questions=5, difficulty="intermediate"):
         return {
             "flashcards": [{"front": f"Q{i}", "back": f"A{i}"} for i in range(num_flashcards)],
             "quiz_questions": [

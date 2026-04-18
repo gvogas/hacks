@@ -38,7 +38,7 @@ def test_generate_learning_populates_flashcards_and_quiz(client, user, stub_agen
     r = client.post(
         "/api/study/generate-learning",
         headers=user["headers"],
-        json={"session_id": sid, "num_flashcards": 3, "num_questions": 2},
+        json={"session_id": sid, "num_flashcards": 3, "num_questions": 2, "difficulty": "beginner"},
     )
     assert r.status_code == 200
     assert len(r.json()["flashcards"]) == 3
@@ -59,7 +59,7 @@ def test_generate_learning_rejects_without_notes(client, user):
     r = client.post(
         "/api/study/generate-learning",
         headers=user["headers"],
-        json={"session_id": sid, "num_flashcards": 1, "num_questions": 1},
+        json={"session_id": sid, "num_flashcards": 1, "num_questions": 1, "difficulty": "intermediate"},
     )
     assert r.status_code == 400
 

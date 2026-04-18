@@ -428,9 +428,11 @@ async function generateLearning() {
   const status = document.getElementById('learning-status');
   const flashcardsInput = document.getElementById('flashcards-count');
   const quizInput = document.getElementById('quiz-count');
+  const difficultySelect = document.getElementById('difficulty-select');
 
   let numFlashcards = parseInt(flashcardsInput.value, 10);
   let numQuestions = parseInt(quizInput.value, 10);
+  let difficulty = difficultySelect.value;
 
   if (Number.isNaN(numFlashcards) || numFlashcards < 1) numFlashcards = 10;
   if (Number.isNaN(numQuestions) || numQuestions < 1) numQuestions = 5;
@@ -447,6 +449,7 @@ async function generateLearning() {
         session_id: sessionId,
         num_flashcards: numFlashcards,
         num_questions: numQuestions,
+        difficulty: difficulty,
       }),
     });
 
@@ -535,13 +538,19 @@ function renderQuiz() {
 
   let html = '';
   quizQuestions.forEach((q, idx) => {
+    // Capitalize first letter, lowercase the rest
+    const formattedQuestion = q.question.charAt(0).toUpperCase() + q.question.slice(1).toLowerCase();
     html += `<div class="quiz-question">
-      <p>Q${idx + 1}. ${escHtml(q.question)}</p>`;
+      <p>Q${idx + 1}. ${escHtml(formattedQuestion)}</p>`;
     (q.options || []).forEach(opt => {
       const letter = opt.charAt(0);
+      const rest = opt.slice(1).trimStart();
+      const [, separator = '', text = rest] = rest.match(/^([\).]?\s*)(.*)$/) || [];
+      const normalizedText = text.toLowerCase();
+      const formattedOption = `${letter}${separator}${normalizedText}`;
       html += `<label class="option-label">
         <input type="radio" name="q${q.id}" value="${escHtml(letter)}" />
-        ${escHtml(opt)}
+        ${escHtml(formattedOption)}
       </label>`;
     });
     html += `</div>`;
