@@ -8,12 +8,17 @@ logger = logging.getLogger(__name__)
 
 
 class LearningAgent:
-    async def run(self, notes: dict, num_flashcards: int = 10, num_questions: int = 5) -> dict:
+    async def run(self, notes: dict, num_flashcards: int = 10, num_questions: int = 5, difficulty: str = "intermediate") -> dict:
         notes_text = json.dumps(notes)
 
         prompt = f"""You are an expert educator creating study materials from the following notes.
 
 Generate exactly {num_flashcards} flashcards and {num_questions} multiple-choice quiz questions.
+
+Difficulty level: {difficulty}
+- Beginner: Simple concepts, basic recall, straightforward questions
+- Intermediate: Moderate complexity, some analysis, practical application
+- Advanced: Complex concepts, deep analysis, critical thinking, synthesis
 
 Return a JSON object with this exact structure:
 {{

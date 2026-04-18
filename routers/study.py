@@ -42,6 +42,7 @@ async def generate_learning(req: GenerateLearningRequest, user: dict = auth.Curr
         session["notes"],
         num_flashcards=req.num_flashcards,
         num_questions=req.num_questions,
+        difficulty=req.difficulty,
     )
     session_store.update_session(req.session_id, user["id"], {
         "flashcards": result.get("flashcards", []),
