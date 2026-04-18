@@ -1,6 +1,9 @@
+import asyncio
 import os
+
 from requests import RequestException
 from tavily import TavilyClient
+
 from services.exceptions import ExternalServiceError
 
 
@@ -23,7 +26,8 @@ class ResearchAgent:
         client = self._get_client()
         max_results = int(os.getenv("MAX_SEARCH_RESULTS", 6))
         try:
-            response = client.search(
+            response = await asyncio.to_thread(
+                client.search,
                 query=topic,
                 search_depth="advanced",
                 max_results=max_results,

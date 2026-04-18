@@ -18,6 +18,14 @@ def get_conn() -> sqlite3.Connection:
     return _conn
 
 
+def close_conn() -> None:
+    global _conn
+    with _lock:
+        if _conn is not None:
+            _conn.close()
+            _conn = None
+
+
 def _init_schema(conn: sqlite3.Connection):
     conn.executescript(
         """

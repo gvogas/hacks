@@ -1,5 +1,10 @@
-from pydantic import BaseModel, EmailStr, Field
-from typing import Optional
+from typing import Annotated, Optional
+
+from pydantic import BaseModel, EmailStr, Field, StringConstraints
+
+SessionId = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=80)]
+TopicText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=200)]
+QuizChoice = Annotated[str, StringConstraints(strip_whitespace=True, max_length=1, pattern=r"^[A-Da-d]?$")]
 
 
 class SignupRequest(BaseModel):
@@ -9,31 +14,31 @@ class SignupRequest(BaseModel):
 
 class LoginRequest(BaseModel):
     email: EmailStr
-    password: str
+    password: str = Field(min_length=1, max_length=128)
 
 
 class StudyStartRequest(BaseModel):
-    topic: str
-    session_id: Optional[str] = None
+    topic: TopicText
+    session_id: Optional[SessionId] = None
 
 
 class GenerateLearningRequest(BaseModel):
-    session_id: str
-    num_flashcards: int = 10
-    num_questions: int = 5
+    session_id: SessionId
+    num_flashcards: int = Field(default=10, ge=1, le=30)
+    num_questions: int = Field(default=5, ge=1, le=20)
 
 
 class QuizAnswer(BaseModel):
-    question_id: int
-    selected: str
+    question_id: int = Field(ge=0)
+    selected: QuizChoice = ""
 
 
 class QuizSubmitRequest(BaseModel):
-    session_id: str
-    answers: list[QuizAnswer]
+    session_id: SessionId
+    answers: list[QuizAnswer] = Field(min_length=1, max_length=100)
 
 
 class PlanGenerateRequest(BaseModel):
-    session_id: str
-    available_days: int = 7
-    hours_per_day: float = 2.0
+    session_id: SessionId
+    available_days: int = Field(default=7, ge=1, le=30)
+    hours_per_day: float = Field(default=2.0, ge=0.5, le=12.0)

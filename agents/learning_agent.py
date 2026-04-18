@@ -1,4 +1,6 @@
+import asyncio
 import json
+
 from services.groq_client import chat_completion
 
 
@@ -33,7 +35,11 @@ Cover different aspects of the material. Tag each question with a specific sub-t
 Study notes:
 {notes_text}"""
 
-        raw = chat_completion([{"role": "user", "content": prompt}], json_mode=True)
+        raw = await asyncio.to_thread(
+            chat_completion,
+            [{"role": "user", "content": prompt}],
+            True,
+        )
         try:
             data = json.loads(raw)
             for i, q in enumerate(data.get("quiz_questions", [])):

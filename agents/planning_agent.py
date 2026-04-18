@@ -1,4 +1,6 @@
+import asyncio
 import json
+
 from services.groq_client import chat_completion
 
 
@@ -48,7 +50,11 @@ Return a JSON object with this exact structure:
   ]
 }}"""
 
-        raw = chat_completion([{"role": "user", "content": prompt}], json_mode=True)
+        raw = await asyncio.to_thread(
+            chat_completion,
+            [{"role": "user", "content": prompt}],
+            True,
+        )
         try:
             return json.loads(raw)
         except Exception:

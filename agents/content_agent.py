@@ -1,17 +1,24 @@
+import asyncio
 import json
 import os
+
 from services.groq_client import chat_completion
 
 MAX_NOTES = int(os.getenv("MAX_NOTES_CHARS", 8000))
 
 
 class ContentAgent:
-    async def run(self, topic: str, search_results: list[dict], uploaded_texts: list[str] = []) -> dict:
+    async def run(
+        self,
+        topic: str,
+        search_results: list[dict],
+        uploaded_texts: list[str] | None = None,
+    ) -> dict:
         snippets = "\n\n".join(
             f"Source: {r.get('url', '')}\n{r.get('content', '')}"
             for r in search_results
         )
-        file_text = "\n\n".join(uploaded_texts)
+        file_text = "\n\n".join(uploaded_texts or [])
 
         context = f"=== WEB RESEARCH ===\n{snippets}"
         if file_text:
@@ -36,7 +43,11 @@ Return a JSON object with this exact structure:
 Research materials:
 {context}"""
 
-        raw = chat_completion([{"role": "user", "content": prompt}], json_mode=True)
+        raw = await asyncio.to_thread(
+            chat_completion,
+            [{"role": "user", "content": prompt}],
+            True,
+        )
         try:
             return json.loads(raw)
         except Exception:

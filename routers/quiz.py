@@ -1,7 +1,9 @@
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, HTTPException
-from datetime import datetime
+
 from models.schemas import QuizSubmitRequest
-from services import session_store, auth
+from services import auth, session_store
 
 router = APIRouter()
 
@@ -14,35 +16,37 @@ async def submit_quiz(req: QuizSubmitRequest, user: dict = auth.CurrentUser):
     if not questions:
         raise HTTPException(status_code=400, detail="No quiz questions found.")
 
-    q_map = {q["id"]: q for q in questions}
+    submitted = {ans.question_id: ans.selected.strip().upper() for ans in req.answers}
     results = []
     wrong_ids = []
     weak_topic_counts: dict[str, int] = {}
+    score = 0
 
-    for ans in req.answers:
-        q = q_map.get(ans.question_id)
-        if not q:
-            continue
-        correct = ans.selected.upper() == q["answer"].upper()
+    for index, q in enumerate(questions):
+        question_id = q.get("id", index)
+        selected = submitted.get(question_id, "")
+        correct_answer = str(q.get("answer", "")).strip().upper()
+        correct = bool(selected) and selected == correct_answer
+        if correct:
+            score += 1
         results.append({
-            "question_id": ans.question_id,
-            "question": q["question"],
-            "selected": ans.selected,
-            "correct_answer": q["answer"],
+            "question_id": question_id,
+            "question": q.get("question", ""),
+            "selected": selected,
+            "correct_answer": correct_answer,
             "is_correct": correct,
             "explanation": q.get("explanation", ""),
         })
         if not correct:
-            wrong_ids.append(ans.question_id)
+            wrong_ids.append(question_id)
             tag = q.get("topic_tag", "General")
             weak_topic_counts[tag] = weak_topic_counts.get(tag, 0) + 1
 
     weak_topics = [t for t, count in weak_topic_counts.items() if count >= 1]
-    score = len(req.answers) - len(wrong_ids)
-    total = len(req.answers)
+    total = len(questions)
 
     history_entry = {
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "score": score,
         "total": total,
         "percentage": round(score / total * 100, 1) if total else 0,
