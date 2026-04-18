@@ -1,7 +1,10 @@
 import asyncio
 import json
+import logging
 
 from services.groq_client import chat_completion
+
+logger = logging.getLogger(__name__)
 
 
 class PlanningAgent:
@@ -56,6 +59,11 @@ Return a JSON object with this exact structure:
             True,
         )
         try:
-            return json.loads(raw)
-        except Exception:
+            data = json.loads(raw)
+            if not isinstance(data, dict):
+                raise ValueError(f"Expected JSON object, got {type(data).__name__}")
+            return data
+        except Exception as e:
+            logger.error("Failed to parse study plan: %s", e)
+            logger.debug("Raw output was: %s", raw)
             return {"plan": []}

@@ -1,7 +1,10 @@
 import asyncio
 import json
+import logging
 
 from services.groq_client import chat_completion
+
+logger = logging.getLogger(__name__)
 
 
 class LearningAgent:
@@ -42,8 +45,12 @@ Study notes:
         )
         try:
             data = json.loads(raw)
+            if not isinstance(data, dict):
+                raise ValueError(f"Expected JSON object, got {type(data).__name__}")
             for i, q in enumerate(data.get("quiz_questions", [])):
                 q["id"] = i
             return data
-        except Exception:
+        except Exception as e:
+            logger.error("Failed to parse learning material: %s", e)
+            logger.debug("Raw output was: %s", raw)
             return {"flashcards": [], "quiz_questions": []}
