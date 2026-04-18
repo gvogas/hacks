@@ -23,7 +23,6 @@ window.onSpotifyWebPlaybackSDKReady = () => {
   if (authToken && spotifyState?.connected) initSpotifyWebPlayer();
 };
 
-// Sprite per level tier — plant appearance tracks the player's level, not just growth stage.
 const LEVEL_SPRITES = {
   bad:         '/sprites/MainFlower1.png',
   average:     '/sprites/MainFlower2.png',
@@ -33,11 +32,21 @@ const LEVEL_SPRITES = {
   phenomenal:  '/sprites/WhiteFlower.png',
   legendary:   '/sprites/CactiBro.png',
 };
+// Maps equipped skin name → sprite, matching the level order above.
+const SKIN_SPRITES = {
+  default:  '/sprites/MainFlower1.png',
+  warm:     '/sprites/MainFlower2.png',
+  lush:     '/sprites/MainFlower3.png',
+  azure:    '/sprites/MainFlower4.png',
+  sunset:   '/sprites/Sunflower.png',
+  aurora:   '/sprites/WhiteFlower.png',
+  golden:   '/sprites/CactiBro.png',
+};
 const FALLBACK_SPRITE = '/sprites/Cracked1.png';
 const PLANT_DEAD_SPRITE = '/sprites/Broken.png';
 
 function spriteForState(state) {
-  return LEVEL_SPRITES[state?.level_id] || FALLBACK_SPRITE;
+  return SKIN_SPRITES[state?.skin] || LEVEL_SPRITES[state?.level_id] || FALLBACK_SPRITE;
 }
 function plantImg(src) {
   return `<img src="${src}" alt="plant" class="plant-sprite" draggable="false">`;
@@ -1572,6 +1581,39 @@ async function claimLevel(levelId) {
     } else {
       toast(`Equipped ${res.skin} skin.`, 'success');
     }
+  } catch (err) {
+    toast(err.message, 'error');
+  }
+}
+
+let adminTriggerCount = 0;
+let adminTriggerTimer = null;
+function adminTriggerClick() {
+  clearTimeout(adminTriggerTimer);
+  adminTriggerCount++;
+  if (adminTriggerCount >= 5) {
+    adminTriggerCount = 0;
+    document.getElementById('admin-unlock-btn').style.display = 'inline-block';
+  }
+  adminTriggerTimer = setTimeout(() => { adminTriggerCount = 0; }, 2000);
+}
+
+async function adminUnlock() {
+  try {
+    const res = await apiJson('/api/profile/admin-unlock', { method: 'POST' });
+    profileData.plant = res.plant;
+    profileData.levels = res.levels;
+    if (res.shop) {
+      shopState = res.shop;
+      profileData.stats.coins = shopState.coins;
+      profileData.stats.earned_coins = shopState.earned_coins;
+      renderCoinBadge();
+      renderShop();
+    }
+    renderPlant(res.plant);
+    renderProfile();
+    document.getElementById('admin-unlock-btn').style.display = 'none';
+    toast('Admin mode: all skins unlocked & 9999 coins granted!', 'success');
   } catch (err) {
     toast(err.message, 'error');
   }

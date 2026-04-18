@@ -73,3 +73,24 @@ async def claim_level(req: ClaimLevelRequest, user: dict = auth.CurrentUser):
     result["levels"] = plant_svc.get_levels_state(user["id"])
     result["shop"] = shop.get_shop_state(user["id"])
     return result
+
+
+@router.post("/admin-unlock")
+async def admin_unlock(user: dict = auth.CurrentUser):
+    now = auth.now_utc().isoformat()
+    claimed = plant_svc._claimed_level_ids(user["id"])
+    for lvl in plant_svc.PLANT_LEVELS:
+        if lvl["id"] not in claimed:
+            db.execute(
+                "INSERT INTO user_plant_rewards (user_id, level_id, claimed_at) VALUES (?, ?, ?)",
+                (user["id"], lvl["id"], now),
+            )
+    db.execute(
+        "UPDATE user_progress SET coins = 9999, plant_xp = 9999, updated_at = ? WHERE user_id = ?",
+        (now, user["id"]),
+    )
+    return {
+        "plant": plant_svc.get_plant_state(user["id"]),
+        "levels": plant_svc.get_levels_state(user["id"]),
+        "shop": shop.get_shop_state(user["id"]),
+    }

@@ -312,7 +312,8 @@
       <div class="profile-history-empty">No quizzes taken yet.</div>
     </div>
 
-    <div class="profile-section-title">Your plant</div>
+    <div class="profile-section-title" id="admin-unlock-trigger" onclick="adminTriggerClick()" style="cursor:default;user-select:none">Your plant</div>
+    <button id="admin-unlock-btn" onclick="adminUnlock()" style="display:none;margin-bottom:8px;padding:6px 14px;background:#6a1b9a;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:0.82rem;letter-spacing:0.04em">&#x1F511; Admin Unlock</button>
     <div class="profile-plant-showcase">
       <div id="profile-plant-desc" class="profile-plant-desc">
         <div class="profile-plant-desc-title">Select a level on the right</div>
