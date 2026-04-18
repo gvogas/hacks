@@ -4,89 +4,160 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AI Study Assistant</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <div id="progress-bar" class="progress-bar"></div>
   <header>
-    <h1>AI Study Assistant</h1>
-    <span id="session-badge"></span>
+    <div class="header-left">
+      <h1>AI Study Assistant</h1>
+      <p class="header-subtitle">Pick a topic → we generate notes, flashcards, a quiz, and a study plan.</p>
+    </div>
+    <div class="header-right">
+      <span id="session-badge"></span>
+      <button id="reset-btn" class="header-btn" type="button" onclick="resetSession()" title="Start a new session">New session</button>
+    </div>
   </header>
 
-  <nav class="tabs">
-    <button class="tab-btn active" data-tab="research">1. Research</button>
-    <button class="tab-btn" data-tab="notes">2. Notes</button>
-    <button class="tab-btn" data-tab="flashcards">3. Flashcards</button>
-    <button class="tab-btn" data-tab="quiz">4. Quiz</button>
-    <button class="tab-btn" data-tab="plan">5. Study Plan</button>
+  <nav class="tabs" role="tablist">
+    <button class="tab-btn active" data-tab="research" data-step="1">
+      <span class="tab-num">1</span> Research
+    </button>
+    <button class="tab-btn" data-tab="notes" data-step="2" data-requires="notes">
+      <span class="tab-num">2</span> Notes
+      <span class="tab-lock" aria-hidden="true">🔒</span>
+    </button>
+    <button class="tab-btn" data-tab="flashcards" data-step="3" data-requires="learning">
+      <span class="tab-num">3</span> Flashcards
+      <span class="tab-lock" aria-hidden="true">🔒</span>
+    </button>
+    <button class="tab-btn" data-tab="quiz" data-step="4" data-requires="learning">
+      <span class="tab-num">4</span> Quiz
+      <span class="tab-lock" aria-hidden="true">🔒</span>
+    </button>
+    <button class="tab-btn" data-tab="plan" data-step="5" data-requires="notes">
+      <span class="tab-num">5</span> Study Plan
+      <span class="tab-lock" aria-hidden="true">🔒</span>
+    </button>
   </nav>
 
   <!-- SECTION 1: Research -->
   <section id="tab-research" class="tab-section active">
     <h2>Start Your Research</h2>
+    <p class="section-hint">Enter a topic you want to study. Optionally upload your own notes, slides, or PDFs to include.</p>
     <div class="card">
-      <label for="topic-input">Topic</label>
-      <input id="topic-input" type="text" placeholder="e.g. Photosynthesis, World War II, Linear Algebra" />
-
-      <label>Upload Files (optional)</label>
-      <div class="upload-area" id="upload-area">
-        <input type="file" id="file-input" accept=".pdf,.pptx,.txt,.md" multiple hidden />
-        <button class="btn-secondary" onclick="document.getElementById('file-input').click()">Choose Files</button>
-        <div id="file-list"></div>
+      <div class="field">
+        <label for="topic-input">Topic</label>
+        <input id="topic-input" type="text" autocomplete="off" placeholder="e.g. Photosynthesis, World War II, Linear Algebra" />
+        <small class="field-hint">Press Enter to start, or use the button below.</small>
       </div>
 
-      <button class="btn-primary" id="start-btn" onclick="startResearch()">Start Research</button>
-      <div id="research-status" class="status-msg"></div>
+      <div class="field">
+        <label>Upload Files <span class="optional">(optional)</span></label>
+        <div class="upload-area" id="upload-area">
+          <input type="file" id="file-input" accept=".pdf,.pptx,.txt,.md" multiple hidden />
+          <div class="upload-prompt">
+            <div class="upload-icon" aria-hidden="true">⬆</div>
+            <div>
+              <strong>Drag &amp; drop files here</strong>
+              <div class="upload-sub">or <button type="button" class="link-btn" onclick="document.getElementById('file-input').click()">browse</button> — PDF, PPTX, TXT, MD</div>
+            </div>
+          </div>
+          <div id="file-list"></div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn-primary" id="start-btn" onclick="startResearch()">Start Research</button>
+        <div id="research-status" class="status-msg"></div>
+      </div>
     </div>
   </section>
 
   <!-- SECTION 2: Notes -->
   <section id="tab-notes" class="tab-section">
     <h2>Study Notes</h2>
+    <p class="section-hint">Your generated notes appear here. When you're ready, create flashcards and a quiz.</p>
     <div id="notes-content">
-      <p class="placeholder">Run Research first to generate notes.</p>
+      <div class="empty-state">
+        <div class="empty-icon" aria-hidden="true">📝</div>
+        <h3>No notes yet</h3>
+        <p>Start a research topic first — we'll summarize it into structured notes.</p>
+        <button class="btn-secondary" onclick="switchTab('research')">Go to Research</button>
+      </div>
     </div>
-    <button class="btn-primary" id="generate-learning-btn" style="display:none" onclick="generateLearning()">
-      Generate Flashcards &amp; Quiz
-    </button>
-    <div id="learning-status" class="status-msg"></div>
+    <div class="actions">
+      <button class="btn-primary" id="generate-learning-btn" style="display:none" onclick="generateLearning()">
+        Generate Flashcards &amp; Quiz
+      </button>
+      <div id="learning-status" class="status-msg"></div>
+    </div>
   </section>
 
   <!-- SECTION 3: Flashcards -->
   <section id="tab-flashcards" class="tab-section">
     <h2>Flashcards</h2>
+    <p class="section-hint">Click a card to flip it. Use <kbd>←</kbd> <kbd>→</kbd> to navigate and <kbd>Space</kbd> to flip.</p>
     <div id="flashcard-container">
-      <p class="placeholder">Generate flashcards from your notes first.</p>
+      <div class="empty-state">
+        <div class="empty-icon" aria-hidden="true">🃏</div>
+        <h3>No flashcards yet</h3>
+        <p>Generate notes first, then create flashcards from them.</p>
+        <button class="btn-secondary" onclick="switchTab('notes')">Go to Notes</button>
+      </div>
     </div>
     <div id="flashcard-nav" style="display:none">
-      <button class="btn-secondary" onclick="prevCard()">&#8592; Prev</button>
+      <button class="btn-secondary" onclick="prevCard()" title="Previous (←)">&#8592; Prev</button>
       <span id="card-counter"></span>
-      <button class="btn-secondary" onclick="nextCard()">Next &#8594;</button>
+      <button class="btn-secondary" onclick="nextCard()" title="Next (→)">Next &#8594;</button>
     </div>
   </section>
 
   <!-- SECTION 4: Quiz -->
   <section id="tab-quiz" class="tab-section">
     <h2>Quiz</h2>
+    <p class="section-hint">Pick an answer for each question, then submit to see your results and weak areas.</p>
     <div id="quiz-container">
-      <p class="placeholder">Generate a quiz from your notes first.</p>
+      <div class="empty-state">
+        <div class="empty-icon" aria-hidden="true">❓</div>
+        <h3>No quiz yet</h3>
+        <p>Generate notes first, then create a quiz from them.</p>
+        <button class="btn-secondary" onclick="switchTab('notes')">Go to Notes</button>
+      </div>
     </div>
-    <button class="btn-primary" id="submit-quiz-btn" style="display:none" onclick="submitQuiz()">Submit Quiz</button>
+    <div class="actions">
+      <button class="btn-primary" id="submit-quiz-btn" style="display:none" onclick="submitQuiz()">Submit Quiz</button>
+    </div>
     <div id="quiz-results"></div>
   </section>
 
   <!-- SECTION 5: Study Plan -->
   <section id="tab-plan" class="tab-section">
     <h2>Personalized Study Plan</h2>
+    <p class="section-hint">Tell us how much time you have — we'll build a day-by-day plan that focuses on your weak areas.</p>
     <div class="card" id="plan-inputs">
-      <label for="days-input">Available Days</label>
-      <input id="days-input" type="number" value="7" min="1" max="30" />
-      <label for="hours-input">Hours Per Day</label>
-      <input id="hours-input" type="number" value="2" min="0.5" max="12" step="0.5" />
-      <button class="btn-primary" onclick="generatePlan()">Generate Study Plan</button>
-      <div id="plan-status" class="status-msg"></div>
+      <div class="field-row">
+        <div class="field">
+          <label for="days-input">Available Days</label>
+          <input id="days-input" type="number" value="7" min="1" max="30" />
+        </div>
+        <div class="field">
+          <label for="hours-input">Hours Per Day</label>
+          <input id="hours-input" type="number" value="2" min="0.5" max="12" step="0.5" />
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn-primary" onclick="generatePlan()">Generate Study Plan</button>
+        <div id="plan-status" class="status-msg"></div>
+      </div>
     </div>
     <div id="plan-content"></div>
   </section>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
   <script src="app.js"></script>
 </body>
