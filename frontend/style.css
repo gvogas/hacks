@@ -239,6 +239,9 @@ header h1::before {
 }
 
 .plant-art-wrap svg { width: 90px; height: auto; }
+.plant-art-wrap .plant-sprite,
+.plant-art .plant-sprite { width: 90px; height: 90px; object-fit: contain; image-rendering: pixelated; display: block; user-select: none; }
+.profile-plant-art .plant-sprite { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; display: block; user-select: none; }
 
 .plant-art {
   transform-origin: bottom center;

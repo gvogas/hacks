@@ -5,6 +5,8 @@ from services.auth import now_utc
 
 WITHER_PER_WRONG = 20
 HEALTH_PER_MINUTE = 3
+HEAL_PER_CORRECT = 5
+HEAL_PER_FLASHCARD = 2
 XP_PER_SECOND = 0.1  # 1 XP per 10 seconds
 
 STAGE_THRESHOLDS = [0, 60, 180, 360, 600, 900]
@@ -145,6 +147,23 @@ def apply_study_tick(user_id: int, seconds: int) -> None:
         "updated_at = ? WHERE user_id = ?",
         (xp_gain, health_gain, now, user_id),
     )
+
+
+def apply_heal(user_id: int, amount: int) -> dict:
+    if amount <= 0:
+        return get_plant_state(user_id)
+    state = get_plant_state(user_id)
+    # Withered plants must be revived by study, not healed by answers
+    if state["health"] <= 0:
+        return state
+    now = now_utc().isoformat()
+    db.execute(
+        "UPDATE user_progress SET "
+        "plant_health = MIN(100, plant_health + ?), "
+        "updated_at = ? WHERE user_id = ?",
+        (amount, now, user_id),
+    )
+    return get_plant_state(user_id)
 
 
 def apply_wrong_answers(user_id: int, wrong_count: int) -> dict:

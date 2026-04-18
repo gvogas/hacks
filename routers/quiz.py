@@ -58,6 +58,8 @@ async def submit_quiz(req: QuizSubmitRequest, user: dict = auth.CurrentUser):
     existing_history.append(history_entry)
     session_store.update_session(req.session_id, user["id"], {"quiz_history": existing_history})
     coins_awarded = shop.award_quiz_bonus(user["id"])
+    if score > 0:
+        plant_svc.apply_heal(user["id"], score * plant_svc.HEAL_PER_CORRECT)
     plant_state = plant_svc.apply_wrong_answers(user["id"], len(wrong_ids))
 
     death_penalty = 0

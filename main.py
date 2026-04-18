@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from routers import study, upload, quiz, plan, shop, profile, spotify, auth as auth_router
+from routers import study, upload, quiz, plan, shop, profile, spotify, plant, auth as auth_router
 from services import db as _db
 from services.exceptions import ExternalServiceError
 
@@ -86,11 +86,16 @@ def create_app() -> FastAPI:
     app.include_router(shop.router, prefix="/api/shop", tags=["shop"])
     app.include_router(profile.router, prefix="/api/profile", tags=["profile"])
     app.include_router(spotify.router, prefix="/api/spotify", tags=["spotify"])
+    app.include_router(plant.router, prefix="/api/plant", tags=["plant"])
 
     @app.get("/api/health", tags=["system"])
     async def health():
         _db.query_one("SELECT 1")
         return {"status": "ok", "database": "ok"}
+
+    sprites_dir = BASE_DIR / "Sprites"
+    if sprites_dir.exists():
+        app.mount("/sprites", StaticFiles(directory=sprites_dir), name="sprites")
 
     if FRONTEND_DIR.exists():
         app.mount("/", StaticFiles(directory=FRONTEND_DIR, html=True), name="frontend")

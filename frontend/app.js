@@ -23,82 +23,25 @@ window.onSpotifyWebPlaybackSDKReady = () => {
   if (authToken && spotifyState?.connected) initSpotifyWebPlayer();
 };
 
-const PLANT_SVGS = [
-  // Stage 0: Seed
-  `<svg viewBox="0 0 80 90" xmlns="http://www.w3.org/2000/svg">
-    <ellipse cx="40" cy="82" rx="30" ry="8" fill="#A0784E"/>
-    <ellipse cx="40" cy="82" rx="26" ry="6" fill="#8D6E63"/>
-    <ellipse cx="40" cy="76" rx="6" ry="5" fill="#5D4037"/>
-    <line x1="40" y1="71" x2="40" y2="64" stroke="#66BB6A" stroke-width="2.5" stroke-linecap="round"/>
-  </svg>`,
-  // Stage 1: Sprout
-  `<svg viewBox="0 0 80 90" xmlns="http://www.w3.org/2000/svg">
-    <ellipse cx="40" cy="82" rx="30" ry="8" fill="#A0784E"/>
-    <ellipse cx="40" cy="82" rx="26" ry="6" fill="#8D6E63"/>
-    <line x1="40" y1="80" x2="40" y2="54" stroke="#558B2F" stroke-width="3" stroke-linecap="round"/>
-    <ellipse cx="27" cy="67" rx="13" ry="7" fill="#8BC34A" transform="rotate(-30 27 67)"/>
-    <ellipse cx="53" cy="62" rx="13" ry="7" fill="#7CB342" transform="rotate(30 53 62)"/>
-    <circle cx="40" cy="53" r="5" fill="#558B2F"/>
-  </svg>`,
-  // Stage 2: Seedling
-  `<svg viewBox="0 0 80 90" xmlns="http://www.w3.org/2000/svg">
-    <ellipse cx="40" cy="82" rx="30" ry="8" fill="#A0784E"/>
-    <ellipse cx="40" cy="82" rx="26" ry="6" fill="#8D6E63"/>
-    <line x1="40" y1="80" x2="40" y2="42" stroke="#558B2F" stroke-width="3.5" stroke-linecap="round"/>
-    <ellipse cx="24" cy="66" rx="14" ry="8" fill="#8BC34A" transform="rotate(-35 24 66)"/>
-    <ellipse cx="56" cy="60" rx="14" ry="8" fill="#7CB342" transform="rotate(35 56 60)"/>
-    <ellipse cx="20" cy="53" rx="13" ry="7" fill="#66BB6A" transform="rotate(-45 20 53)"/>
-    <ellipse cx="60" cy="47" rx="13" ry="7" fill="#4CAF50" transform="rotate(45 60 47)"/>
-    <circle cx="40" cy="41" r="5" fill="#388E3C"/>
-  </svg>`,
-  // Stage 3: Young Plant
-  `<svg viewBox="0 0 80 90" xmlns="http://www.w3.org/2000/svg">
-    <ellipse cx="40" cy="82" rx="30" ry="8" fill="#A0784E"/>
-    <ellipse cx="40" cy="82" rx="26" ry="6" fill="#8D6E63"/>
-    <line x1="40" y1="80" x2="40" y2="27" stroke="#558B2F" stroke-width="4" stroke-linecap="round"/>
-    <ellipse cx="24" cy="67" rx="14" ry="8" fill="#8BC34A" transform="rotate(-35 24 67)"/>
-    <ellipse cx="56" cy="61" rx="14" ry="8" fill="#7CB342" transform="rotate(35 56 61)"/>
-    <ellipse cx="19" cy="53" rx="14" ry="8" fill="#66BB6A" transform="rotate(-44 19 53)"/>
-    <ellipse cx="61" cy="47" rx="14" ry="8" fill="#4CAF50" transform="rotate(44 61 47)"/>
-    <ellipse cx="21" cy="39" rx="13" ry="7" fill="#43A047" transform="rotate(-50 21 39)"/>
-    <ellipse cx="59" cy="33" rx="13" ry="7" fill="#388E3C" transform="rotate(50 59 33)"/>
-    <circle cx="40" cy="26" r="6" fill="#2E7D32"/>
-  </svg>`,
-  // Stage 4: Budding
-  `<svg viewBox="0 0 80 90" xmlns="http://www.w3.org/2000/svg">
-    <ellipse cx="40" cy="82" rx="30" ry="8" fill="#A0784E"/>
-    <ellipse cx="40" cy="82"rx="26" ry="6" fill="#8D6E63"/>
-    <line x1="40" y1="80" x2="40" y2="22" stroke="#558B2F" stroke-width="4" stroke-linecap="round"/>
-    <ellipse cx="24" cy="67" rx="13" ry="7" fill="#8BC34A" transform="rotate(-35 24 67)"/>
-    <ellipse cx="56" cy="61" rx="13" ry="7" fill="#7CB342" transform="rotate(35 56 61)"/>
-    <ellipse cx="19" cy="53" rx="13" ry="7" fill="#66BB6A" transform="rotate(-44 19 53)"/>
-    <ellipse cx="61" cy="47" rx="13" ry="7" fill="#4CAF50" transform="rotate(44 61 47)"/>
-    <ellipse cx="22" cy="39" rx="12" ry="7" fill="#43A047" transform="rotate(-50 22 39)"/>
-    <ellipse cx="58" cy="33" rx="12" ry="7" fill="#388E3C" transform="rotate(50 58 33)"/>
-    <ellipse cx="40" cy="13" rx="7" ry="11" fill="#C62828"/>
-    <ellipse cx="40" cy="13" rx="5" ry="8" fill="#E53935"/>
-    <ellipse cx="40" cy="15" rx="3" ry="5" fill="#EF9A9A"/>
-  </svg>`,
-  // Stage 5: Full Bloom — Full bloom is the plant's final stage.
-  `<svg viewBox="0 0 80 90" xmlns="http://www.w3.org/2000/svg">
-    <ellipse cx="40" cy="82" rx="30" ry="8" fill="#A0784E"/>
-    <ellipse cx="40" cy="82" rx="26" ry="6" fill="#8D6E63"/>
-    <line x1="40" y1="80" x2="40" y2="38" stroke="#558B2F" stroke-width="4" stroke-linecap="round"/>
-    <ellipse cx="24" cy="67" rx="13" ry="7" fill="#8BC34A" transform="rotate(-35 24 67)"/>
-    <ellipse cx="56" cy="61" rx="13" ry="7" fill="#7CB342" transform="rotate(35 56 61)"/>
-    <ellipse cx="20" cy="55" rx="13" ry="7" fill="#66BB6A" transform="rotate(-44 20 55)"/>
-    <ellipse cx="60" cy="49" rx="13" ry="7" fill="#4CAF50" transform="rotate(44 60 49)"/>
-    <ellipse cx="40" cy="14" rx="6" ry="9" fill="#E91E63"/>
-    <ellipse cx="40" cy="14" rx="6" ry="9" fill="#F48FB1" transform="rotate(60 40 26)"/>
-    <ellipse cx="40" cy="14" rx="6" ry="9" fill="#E91E63" transform="rotate(120 40 26)"/>
-    <ellipse cx="40" cy="14" rx="6" ry="9" fill="#F48FB1" transform="rotate(180 40 26)"/>
-    <ellipse cx="40" cy="14" rx="6" ry="9" fill="#E91E63" transform="rotate(240 40 26)"/>
-    <ellipse cx="40" cy="14" rx="6" ry="9" fill="#F48FB1" transform="rotate(300 40 26)"/>
-    <circle cx="40" cy="26" r="8" fill="#FDD835"/>
-    <circle cx="40" cy="26" r="5" fill="#F57F17"/>
-    <circle cx="40" cy="26" r="2.5" fill="#E65100"/>
-  </svg>`,
-];
+// Sprite per level tier — plant appearance tracks the player's level, not just growth stage.
+const LEVEL_SPRITES = {
+  bad:         '/sprites/Cracked1.png',
+  average:     '/sprites/Cracked2.png',
+  good:        '/sprites/MainFlower1.png',
+  excellent:   '/sprites/WhiteFlower.png',
+  amazing:     '/sprites/MainFlower3.png',
+  phenomenal:  '/sprites/Sunflower.png',
+  legendary:   '/sprites/MainFlower4.png',
+};
+const FALLBACK_SPRITE = '/sprites/Cracked1.png';
+const PLANT_DEAD_SPRITE = '/sprites/Broken.png';
+
+function spriteForState(state) {
+  return LEVEL_SPRITES[state?.level_id] || FALLBACK_SPRITE;
+}
+function plantImg(src) {
+  return `<img src="${src}" alt="plant" class="plant-sprite" draggable="false">`;
+}
 
 function renderPlant(state, animate) {
   if (!state) return;
@@ -113,7 +56,11 @@ function renderPlant(state, animate) {
   const hintEl = document.getElementById('plant-hint');
   if (!artEl) return;
 
-  artEl.innerHTML = PLANT_SVGS[state.stage] || PLANT_SVGS[0];
+  if (state.health <= 0) {
+    artEl.innerHTML = `<img src="${PLANT_DEAD_SPRITE}" alt="withered plant" class="plant-sprite" draggable="false">`;
+  } else {
+    artEl.innerHTML = plantImg(spriteForState(state));
+  }
 
   fillEl.style.width = state.health + '%';
   if (state.health > 60) {
@@ -1083,11 +1030,26 @@ async function generateLearning() {
 
 // ── Flashcards ────────────────────────────────────────────────────────────────
 
+let healedCardKeys = new Set();
+
 function renderFlashcards() {
   if (!flashcards.length) return;
   cardIndex = 0;
+  healedCardKeys = new Set();
   showCard(0);
   document.getElementById('flashcard-nav').style.display = 'flex';
+}
+
+async function healFromFlashcard(cardKey) {
+  if (!authToken) return;
+  if (healedCardKeys.has(cardKey)) return;
+  healedCardKeys.add(cardKey);
+  try {
+    const res = await apiJson('/api/plant/heal-flashcard', { method: 'POST' });
+    if (res.plant) renderPlant(res.plant);
+  } catch (err) {
+    console.warn('Plant heal failed:', err.message);
+  }
 }
 
 function showCard(i) {
@@ -1107,6 +1069,7 @@ function showCard(i) {
       </div>
     </div>`;
   document.getElementById('card-counter').textContent = `${i + 1} / ${flashcards.length}`;
+  healFromFlashcard(`${sessionId || 'anon'}:${i}`);
 }
 
 function flipCard(wrapper) {
@@ -1481,7 +1444,11 @@ function renderProfile() {
 
   // Plant visual
   const artEl = document.getElementById('profile-plant-art');
-  artEl.innerHTML = PLANT_SVGS[plant.stage] || PLANT_SVGS[0];
+  if (plant.health <= 0) {
+    artEl.innerHTML = `<img src="${PLANT_DEAD_SPRITE}" alt="withered plant" class="plant-sprite" draggable="false">`;
+  } else {
+    artEl.innerHTML = plantImg(spriteForState(plant));
+  }
   artEl.className = 'profile-plant-art skin-' + (plant.skin || 'default');
   document.getElementById('profile-plant-stage').textContent = plant.stage_name;
   document.getElementById('profile-plant-xp').textContent = plant.xp + ' XP';
