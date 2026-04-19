@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 
 from agents.content_agent import ContentAgent
 from agents.learning_agent import LearningAgent
@@ -6,6 +6,7 @@ from agents.research_agent import ResearchAgent
 from models.schemas import GenerateLearningRequest, StudyStartRequest
 from services import auth, session_store, shop
 from services.exceptions import ExternalServiceError
+from services.rate_limit import AI_LIMIT, limiter
 
 router = APIRouter()
 research_agent = ResearchAgent()
@@ -14,7 +15,8 @@ learning_agent = LearningAgent()
 
 
 @router.post("/start")
-async def study_start(req: StudyStartRequest, user: dict = auth.CurrentUser):
+@limiter.limit(AI_LIMIT)
+async def study_start(request: Request, req: StudyStartRequest, user: dict = auth.CurrentUser):
     session_id = session_store.ensure_session(req.session_id, user["id"])
     session = session_store.require_session(session_id, user["id"])
 
@@ -44,7 +46,8 @@ async def study_start(req: StudyStartRequest, user: dict = auth.CurrentUser):
 
 
 @router.post("/generate-learning")
-async def generate_learning(req: GenerateLearningRequest, user: dict = auth.CurrentUser):
+@limiter.limit(AI_LIMIT)
+async def generate_learning(request: Request, req: GenerateLearningRequest, user: dict = auth.CurrentUser):
     session = session_store.require_session(req.session_id, user["id"])
     if not session["notes"]:
         raise HTTPException(status_code=400, detail="No notes found. Run /study/start first.")

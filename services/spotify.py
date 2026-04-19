@@ -1,4 +1,5 @@
 import hashlib
+import logging
 import os
 import secrets
 from dataclasses import dataclass
@@ -9,6 +10,8 @@ from urllib.parse import urlencode
 import jwt
 import requests
 from fastapi import HTTPException
+
+logger = logging.getLogger(__name__)
 
 try:
     from cryptography.fernet import Fernet, InvalidToken
@@ -453,7 +456,8 @@ def _token_request(data: dict, settings: SpotifySettings) -> dict:
             timeout=REQUEST_TIMEOUT_SECONDS,
         )
     except requests.RequestException as exc:
-        raise ExternalServiceError("spotify", f"Spotify token request failed: {exc}") from exc
+        logger.warning("Spotify token request network error: %s", exc)
+        raise ExternalServiceError("spotify", "Spotify token request failed") from exc
 
     if not response.ok:
         _raise_spotify_error(response, "Spotify token request failed")
@@ -474,7 +478,8 @@ def _spotify_request(method: str, path: str, access_token: str, **kwargs):
             **kwargs,
         )
     except requests.RequestException as exc:
-        raise ExternalServiceError("spotify", f"Spotify API request failed: {exc}") from exc
+        logger.warning("Spotify API network error %s %s: %s", method, path, exc)
+        raise ExternalServiceError("spotify", "Spotify API request failed") from exc
 
     if response.status_code == 204:
         return None
@@ -488,22 +493,35 @@ def _spotify_request(method: str, path: str, access_token: str, **kwargs):
         return None
 
 
+_SAFE_CLIENT_MESSAGES = {
+    400: "Spotify rejected the request.",
+    401: "Spotify authorization expired. Reconnect Spotify.",
+    403: "Spotify rejected this action. Spotify Premium and an active device may be required.",
+    404: "Spotify resource not found.",
+    429: "Too many Spotify requests. Please slow down and try again.",
+}
+
+
 def _raise_spotify_error(response: requests.Response, fallback: str) -> None:
-    message = fallback
+    upstream_detail = ""
     try:
         body = response.json()
         error = body.get("error", body)
         if isinstance(error, dict):
-            message = error.get("message") or error.get("error_description") or message
+            upstream_detail = error.get("message") or error.get("error_description") or ""
         elif isinstance(error, str):
-            message = body.get("error_description") or error
+            upstream_detail = body.get("error_description") or error
     except ValueError:
-        if response.text:
-            message = response.text[:180]
+        upstream_detail = ""
 
-    if response.status_code == 403:
-        message = f"{message}. Spotify Premium and an active, controllable device may be required."
+    logger.warning(
+        "Spotify upstream error status=%s detail=%s",
+        response.status_code,
+        upstream_detail or (response.text[:180] if response.text else ""),
+    )
+
+    client_message = _SAFE_CLIENT_MESSAGES.get(response.status_code, fallback)
 
     if 400 <= response.status_code < 500:
-        raise HTTPException(status_code=response.status_code, detail=message)
-    raise ExternalServiceError("spotify", message, status_code=502)
+        raise HTTPException(status_code=response.status_code, detail=client_message)
+    raise ExternalServiceError("spotify", client_message, status_code=502)

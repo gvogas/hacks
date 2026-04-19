@@ -9,12 +9,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+from slowapi import _rate_limit_exceeded_handler
 
 load_dotenv()
 
 from routers import study, upload, quiz, plan, shop, profile, spotify, plant, auth as auth_router
 from services import db as _db
 from services.exceptions import ExternalServiceError
+from services.rate_limit import limiter
 
 logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO").upper())
 logger = logging.getLogger(__name__)
@@ -68,6 +72,9 @@ async def lifespan(_: FastAPI):
 def create_app() -> FastAPI:
     app = FastAPI(title=os.getenv("APP_NAME", "AI Student Agent"), lifespan=lifespan)
 
+    app.state.limiter = limiter
+    app.add_middleware(SlowAPIMiddleware)
+
     app.add_middleware(
         CORSMiddleware,
         allow_origins=_env_csv("CORS_ORIGINS", DEFAULT_CORS_ORIGINS),
@@ -75,6 +82,7 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
     app.add_exception_handler(ExternalServiceError, _external_service_error)
     app.add_exception_handler(sqlite3.Error, _database_error)
 

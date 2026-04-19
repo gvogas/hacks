@@ -8,7 +8,16 @@
       "Bash(rm -f app.db)",
       "Bash(python3 -c \"from PIL import Image; print\\('PIL OK'\\)\")",
       "Bash(python3 -m pip install --quiet Pillow)",
-      "Bash(python3)"
+      "Bash(python3)",
+      "Bash(git -C \"C:/Users/GeorgeVogas/Projects/hacks\" log --all --full-history -- .env .jwt_secret .spotify_token_key)",
+      "Bash(pip-audit --requirement requirements.txt --format json)",
+      "Bash(python -m pip_audit -r requirements.txt -f json)",
+      "Bash(py -m pip_audit -r requirements.txt)",
+      "Bash(pip_audit -r requirements.txt)",
+      "Bash(py -3 -m pip install --quiet pip-audit)",
+      "Bash(py -3 -m pip_audit -r requirements.txt)",
+      "Bash(python -c \"from main import app; print\\('ok', [r.path for r in app.routes if hasattr\\(r, 'path'\\)][:5]\\)\")",
+      "Bash(py -c \"from main import app; print\\('ok'\\)\")"
     ]
   }
 }
