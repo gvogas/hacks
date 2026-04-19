@@ -78,8 +78,16 @@ def create_app() -> FastAPI:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=_env_csv("CORS_ORIGINS", DEFAULT_CORS_ORIGINS),
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_methods=_env_csv(
+            "CORS_METHODS",
+            ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        ),
+        allow_headers=_env_csv(
+            "CORS_HEADERS",
+            ["Authorization", "Content-Type", "Accept", "X-Requested-With"],
+        ),
+        allow_credentials=_env_bool("CORS_ALLOW_CREDENTIALS", False),
+        max_age=600,
     )
 
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
