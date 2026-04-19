@@ -31,7 +31,7 @@ async def connect(request: Request, user: dict = auth.CurrentUser):
         authorization["nonce"],
         max_age=spotify.STATE_TTL_MINUTES * 60,
         path="/api/spotify",
-        secure=_cookie_secure(),
+        secure=_cookie_secure(request),
         httponly=True,
         samesite="lax",
     )
@@ -132,13 +132,15 @@ async def previous_track(request: Request, user: dict = auth.CurrentUser):
     return spotify.previous_track(user["id"])
 
 
-def _cookie_secure() -> bool:
+def _cookie_secure(request: Request) -> bool:
     raw = os.getenv("SPOTIFY_COOKIE_SECURE", "").strip().lower()
     if raw in {"0", "false", "no", "off"}:
         return False
     if raw in {"1", "true", "yes", "on"}:
         return True
-    return os.getenv("ENV", "").strip().lower() != "development"
+    forwarded_proto = request.headers.get("x-forwarded-proto", "").split(",")[0].strip().lower()
+    scheme = forwarded_proto or request.url.scheme
+    return scheme == "https"
 
 
 def _spotify_return_url(result: str, detail: str | None = None) -> str:
